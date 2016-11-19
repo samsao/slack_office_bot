@@ -1,0 +1,8 @@
+{
+	"tasks": [{
+		"title": "My first task",
+		"description": "It's sooooo fun",
+		"tacos": 1,
+		"days": [1, 2, 3, 4, 5]
+	}]
+}
