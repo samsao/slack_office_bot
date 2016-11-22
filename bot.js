@@ -4,10 +4,12 @@
 'use strict'
 
 // imports
-const fs = require('fs');
+const Fs = require('fs');
+const Client = require('node-rest-client').Client;
 const Task = require('./model/task.js');
 const User = require('./model/user.js');
 const Util = require('./util.js');
+const WebClient = require('@slack/client').WebClient;
 
 function Bot() {
 	// tasks is a two-dimensional array where the first dimension is the group
@@ -15,6 +17,9 @@ function Bot() {
 	// It is to make it easier to group recurring tasks.
 	this.tasks = [];
 	this.util = new Util();
+	this.client = new Client();
+	this.client.registerMethod("slackTeams", "https://beepboophq.com/api/v1/slack-teams", "GET");
+	this.initializeWebClient();
 }
 
 /**
@@ -24,7 +29,7 @@ Bot.prototype.generateTasks = function() {
 	// empty the tasks first
 	this.tasks = [];
 	// read the JSON file
-	var tasksJSON = JSON.parse(fs.readFileSync('model/tasks.json', 'utf8')).tasks;
+	var tasksJSON = JSON.parse(Fs.readFileSync('model/tasks.json', 'utf8')).tasks;
 	for (var i in tasksJSON) {
 		var title = tasksJSON[i].title;
 		var description = tasksJSON[i].description;
@@ -116,6 +121,44 @@ Bot.prototype.getTask = function(groupId, day) {
 		}
 	}
 	return null;
+}
+
+/**
+ * Initialize Slack Web API client.
+ * It gets the Access Token from BeepBoop.
+ *
+ */
+Bot.prototype.initializeWebClient = function() {
+	var beepBoopToken = process.env.BEEPBOOP_TOKEN || '';
+	var args = {
+		headers: {
+			"Authorization": "Bearer " + beepBoopToken
+		}
+	};
+
+	var self = this;
+	this.client.methods.slackTeams(args, function(data, response) {
+		self.webClient = new WebClient(data.results[0].slack_bot_access_token);
+	});
+}
+
+/**
+ * FIXME temporary to test sending messages
+ * Good news: it works :)
+ *
+ */
+Bot.prototype.sendMessageTest = function() {
+	this.webClient.chat.postMessage('G3466NZT4',
+		'Hello everyone!!!!', {
+			as_user: true
+		},
+		function(err, res) {
+			if (err) {
+				console.log('Error:', err);
+			} else {
+				console.log('Message sent: ', res);
+			}
+		});
 }
 
 module.exports = Bot;

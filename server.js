@@ -27,6 +27,7 @@ slapp.message('tasks', ['mention'], (msg) => {
 })
 
 slapp.action('pick_task_callback', 'pick', (msg, value) => {
+  console.log(msg);
   // the task group id is msg.body.attachment_id - 1
   bot.assignTask(msg.body.user, msg.body.attachment_id - 1, value);
   // list the tasks again to remove the button
@@ -39,8 +40,8 @@ var server = slapp.attachToExpress(express())
 // start http server
 server.listen(port, (err) => {
   if (err) {
-    return console.error(err)
+    return console.error(err);
   }
-  console.log(`Listening on port ${port}`)
+  console.log(`Listening on port ${port}`);
   bot.generateTasks();
 })
