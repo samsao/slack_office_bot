@@ -37,4 +37,3 @@ Your bot will not show as "online", which is a current limitation of the [Slack 
 [slapp]: https://github.com/BeepBoopHQ/slapp
 [slack-events-api]: https://api.slack.com/events-api
 [presence-polyfill]: https://github.com/BeepBoopHQ/beepboop-slapp-presence-polyfill
-
