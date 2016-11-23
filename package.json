@@ -17,7 +17,9 @@
   },
   "homepage": "https://github.com/BeepBoopHQ/starter-slapp-app#readme",
   "dependencies": {
+    "@slack/client": "^3.6.1",
     "express": "^4.14.0",
+    "node-rest-client": "^2.0.1",
     "nodemon": "^1.11.0",
     "slapp": "^1.2.0",
     "slapp-context-beepboop": "^1.1.0",
