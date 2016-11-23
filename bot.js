@@ -10,16 +10,21 @@ const Task = require('./model/task.js');
 const User = require('./model/user.js');
 const Util = require('./util.js');
 const WebClient = require('@slack/client').WebClient;
+var Scheduler = require('./messageScheduler.js')
 
 function Bot() {
 	// tasks is a two-dimensional array where the first dimension is the group
 	// and the second dimension are the tasks in the group.
 	// It is to make it easier to group recurring tasks.
+
 	this.tasks = [];
 	this.util = new Util();
 	this.client = new Client();
 	this.client.registerMethod("slackTeams", "https://beepboophq.com/api/v1/slack-teams", "GET");
 	this.initializeWebClient();
+
+	//As soon as the bot start it should setup the reminder.
+	this.setupTaskReminder()
 }
 
 /**
@@ -28,6 +33,7 @@ function Bot() {
 Bot.prototype.generateTasks = function() {
 	// empty the tasks first
 	this.tasks = [];
+
 	// read the JSON file
 	var tasksJSON = JSON.parse(Fs.readFileSync('model/tasks.json', 'utf8')).tasks;
 	for (var i in tasksJSON) {
@@ -52,9 +58,25 @@ Bot.prototype.generateTasks = function() {
  */
 Bot.prototype.listTasks = function(msg, replace) {
 	// create the attachments
+	var attachments = this.formatTasks(this.tasks)
+
+	if (replace) {
+		msg.respond({
+			text: 'Here are the tasks for the week:',
+			attachments: attachments,
+		});
+	} else {
+		msg.say({
+			text: 'Here are the tasks for the week:',
+			attachments: attachments,
+		});
+	}
+}
+
+Bot.prototype.formatTasks = function(tasks) {
 	var attachments = [];
-	for (var i in this.tasks) {
-		var tasks = this.tasks[i];
+	for (var i in tasks) {
+		var tasks = tasks[i];
 		var actions = [];
 		for (var j in tasks) {
 			var task = tasks[j];
@@ -80,18 +102,7 @@ Bot.prototype.listTasks = function(msg, replace) {
 			actions: actions
 		});
 	};
-
-	if (replace) {
-		msg.respond({
-			text: 'Here are the tasks for the week:',
-			attachments: attachments,
-		});
-	} else {
-		msg.say({
-			text: 'Here are the tasks for the week:',
-			attachments: attachments,
-		});
-	}
+	return attachments
 }
 
 /**
@@ -147,9 +158,10 @@ Bot.prototype.initializeWebClient = function() {
  * Good news: it works :)
  *
  */
-Bot.prototype.sendMessageTest = function() {
-	this.webClient.chat.postMessage('G3466NZT4',
-		'Hello everyone!!!!', {
+Bot.prototype.sendMessageTest = function(userID) {
+	// this.webClient.chat.sendMessage('Hello ' + user.name + '!', userID);
+	this.webClient.chat.postMessage(userID,
+		'You are really a peste', {
 			as_user: true
 		},
 		function(err, res) {
@@ -159,6 +171,49 @@ Bot.prototype.sendMessageTest = function() {
 				console.log('Message sent: ', res);
 			}
 		});
+}
+
+Bot.prototype.setupTaskReminder = function() {
+	var remindScheduler = new Scheduler()
+	var self = this
+	remindScheduler.scheduleCallback([1,2,3,4,5],21, function() {
+		self.remindUserTasks();
+	});
+}
+
+Bot.prototype.remindUserTasks = function() {
+	var usersTasks = this.getUsersTasks()
+	for(var user in usersTasks) {
+		//FIXME: Setup proper format and callback
+		let formatedTasks = this.formatTasks([usersTasks[user]])
+		this.webClient.chat.postMessage(user,
+		'Here is a list of your tasks:', {
+			attachments: formatedTasks,
+			as_user: true
+		},
+		function(err, res) {
+			if (err) {
+				console.log('Error:', err);
+			} else {
+				console.log('Message sent: ', res);
+			}
+		});
+	}
+}
+
+Bot.prototype.getUsersTasks = function() {
+	var userTaskDictionary = {};
+	this.tasks.forEach(function(taskGroup){
+		taskGroup.forEach(function(task){
+			if (task.assignee != null) {
+				if (userTaskDictionary[task.assignee] == null) {
+					userTaskDictionary[task.assignee] = []
+				}
+				userTaskDictionary[task.assignee].push(task)
+			}
+		});
+	});
+	return userTaskDictionary
 }
 
 module.exports = Bot;
