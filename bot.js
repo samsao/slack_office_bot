@@ -183,10 +183,10 @@ Bot.prototype.setupTaskReminder = function() {
 
 Bot.prototype.remindUserTasks = function() {
 	var usersTasks = this.getUsersTasks()
-	for(var user in usersTasks) {
+	for(var userID in usersTasks) {
 		//FIXME: Setup proper format and callback
-		let formatedTasks = this.formatTasks([usersTasks[user]])
-		this.webClient.chat.postMessage(user,
+		let formatedTasks = this.formatTasks([usersTasks[userID]])
+		this.webClient.chat.postMessage(userID,
 		'Here is a list of your tasks:', {
 			attachments: formatedTasks,
 			as_user: true
@@ -206,8 +206,8 @@ Bot.prototype.getUsersTasks = function() {
 	this.tasks.forEach(function(taskGroup){
 		taskGroup.forEach(function(task){
 			if (task.assignee != null) {
-				if (userTaskDictionary[task.assignee] == null) {
-					userTaskDictionary[task.assignee] = []
+				if (userTaskDictionary[task.assignee.id] == null) {
+					userTaskDictionary[task.assignee.id] = []
 				}
 				userTaskDictionary[task.assignee].push(task)
 			}
