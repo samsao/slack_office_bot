@@ -7,7 +7,7 @@
 const Fs = require('fs');
 const Client = require('node-rest-client').Client;
 const Task = require('./model/task.js');
-const TaskAction = require('./model/taskAction.js');
+const TaskMessageAction = require('./model/taskMessageAction.js');
 const User = require('./model/user.js');
 const Util = require('./util.js');
 const WebClient = require('@slack/client').WebClient;
@@ -33,14 +33,14 @@ function Bot() {
 Bot.prototype.generateTasks = function() {
 	// empty the tasks first
 	this.tasks = new Array(5);
-	
+
 	// read the JSON file
 	var tasksJSON = JSON.parse(Fs.readFileSync('model/tasks.json', 'utf8')).tasks;
 
 	//Create new array to hold tasks
-	for(var i = 0; i < 5;i++){
+	for (var i = 0; i < 5; i++) {
 		this.tasks[i] = [];
-	} 
+	}
 	//insert tasks in the array
 	for (var i in tasksJSON) {
 		var title = tasksJSON[i].title;
@@ -61,46 +61,46 @@ Bot.prototype.generateTasks = function() {
  * @param replace boolean to know if the message should be replaced or not
  */
 Bot.prototype.listTasks = function(msg, replace) {
-	// create the attachments
-	var currentDay = this.util.currentDay();
-	var attachments = [];
-	var msgTitle = 'Here are the tasks for the day:';
-	//If not a valid day in the array should be empty tasks
-	var tasksToList = this.tasks[currentDay];
-	if (tasksToList) {
-		attachments = this.getTaskAvailableListMessageAttachments(tasksToList);
-	} else {
-		msgTitle = 'There are no tasks for today! :beers:';
-	}
+		// create the attachments
+		var currentDay = this.util.currentDay();
+		var attachments = [];
+		var msgTitle = 'Here are the tasks for the day:';
+		//If not a valid day in the array should be empty tasks
+		var tasksToList = this.tasks[currentDay];
+		if (tasksToList) {
+			attachments = this.getTaskAvailableListMessageAttachments(tasksToList);
+		} else {
+			msgTitle = 'There are no tasks for today! :beers:';
+		}
 
-	if (replace) {
-		msg.respond({
-			text: msgTitle,
-			attachments: attachments,
-		});
-	} else {
-		msg.say({
-			text: msgTitle,
-			attachments: attachments,
-		});
+		if (replace) {
+			msg.respond({
+				text: msgTitle,
+				attachments: attachments,
+			});
+		} else {
+			msg.say({
+				text: msgTitle,
+				attachments: attachments,
+			});
+		}
 	}
-}
-/**
- * get a list of attachments to post based on tasks
- *
- * @param tasks tasks to be sent in the message
- * @return formatted attachment to post as message
- */
+	/**
+	 * get a list of attachments to post based on tasks
+	 *
+	 * @param tasks tasks to be sent in the message
+	 * @return formatted attachment to post as message
+	 */
 Bot.prototype.getTaskAvailableListMessageAttachments = function(tasks) {
-	var action = new TaskAction('Pick','Pick','button', 0);
-	var formatedTasks = this.createTaskListMessageAttachments(tasks, 'pick_task_callback',[action], true);
-	return formatedTasks
-}
-/**
- * Get tasks for that user and list them in Private message
- *
- * @param tasks tasks to be sent in the message
- */
+		var action = new TaskMessageAction('Pick', 'Pick', 'button', 0);
+		var attachments = this.createTaskListMessageAttachments(tasks, 'pick_task_callback', [action], true);
+		return attachments;
+	}
+	/**
+	 * Get tasks for that user and list them in Private message
+	 *
+	 * @param tasks tasks to be sent in the message
+	 */
 Bot.prototype.filterAndListUserTasksPM = function(userID) {
 	var tasksDictionary = this.getUsersTasks();
 	var userTasks = tasksDictionary[userID];
@@ -112,16 +112,16 @@ Bot.prototype.filterAndListUserTasksPM = function(userID) {
  *
  * @param tasks tasks to be sent in the message
  * @param callbackID id of the user to send the messages
-
+ 
  */
 Bot.prototype.listUserTasksPM = function(userTasks, userID) {
-	var unpickAction = new TaskAction('Unpick','Unpick','button', 0);
-	var doneAction = new TaskAction('Done','Finish','button', 1);
-	var formatedTasks = this.createTaskListMessageAttachments(userTasks, 'update_task_callback',[unpickAction,doneAction], false);
+	var unpickAction = new TaskMessageAction('Unpick', 'Unpick', 'button', 0);
+	var doneAction = new TaskMessageAction('Done', 'Finish', 'button', 1);
+	var attachments = this.createTaskListMessageAttachments(userTasks, 'update_task_callback', [unpickAction, doneAction], false);
 
 	this.webClient.chat.postMessage(userID,
 		'Here is a list of your tasks:', {
-			attachments: formatedTasks,
+			attachments: attachments,
 			as_user: true
 		},
 		function(err, res) {
@@ -138,22 +138,22 @@ Bot.prototype.listUserTasksPM = function(userTasks, userID) {
  *
  * @param tasks tasks to be sent in the message
  * @param callbackID callback to listen to the response
- * @param taskActions actions for this tasks
+ * @param actions actions for this tasks
  * @param checkAsignee boolean indicating if should check assignee or not to display actions
  */
-Bot.prototype.createTaskListMessageAttachments = function(tasks, callbackID, taskActions, checkAsignee) {
+Bot.prototype.createTaskListMessageAttachments = function(tasks, callbackID, actions, checkAsignee) {
 	var attachments = [];
 	for (var i in tasks) {
 		var task = tasks[i];
 		var actions = [];
 
 		if (!checkAsignee || !task.assignee) {
-			for (var j in taskActions) {
+			for (var j in actions) {
 				actions.push({
-					name: taskActions[j].name,
-					text: taskActions[j].text,
-					type: taskActions[j].type,
-					value: taskActions[j].value
+					name: actions[j].name,
+					text: actions[j].text,
+					type: actions[j].type,
+					value: actions[j].value
 				});
 			}
 		}
@@ -250,13 +250,13 @@ Bot.prototype.setupRecurrentTasks = function() {
 }
 Bot.prototype.setupTaskReminder = function(remindScheduler) {
 	var self = this;
-	remindScheduler.scheduleCallback([1,2,3,4,5],[21],[0], function() {
+	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [21], [0], function() {
 		self.remindUserTasks();
 	});
 }
 Bot.prototype.setupTaskGeneration = function(remindScheduler) {
 	var self = this;
-	remindScheduler.scheduleCallback([1],[8],[30], function() {
+	remindScheduler.scheduleCallback([1], [8], [30], function() {
 		self.generateTasks();
 	});
 }
@@ -266,16 +266,16 @@ Bot.prototype.setupTaskGeneration = function(remindScheduler) {
  */
 Bot.prototype.remindUserTasks = function() {
 	var usersTasks = this.getUsersTasks();
-	for(var userID in usersTasks) {
-		var formatedTasks = this.listUserTasksPM([usersTasks[userID]],userID);
-		this.listUserTasksPM(formatedTasks,userID);
+	for (var userID in usersTasks) {
+		var formatedTasks = this.listUserTasksPM([usersTasks[userID]], userID);
+		this.listUserTasksPM(formatedTasks, userID);
 	}
 }
 
 Bot.prototype.getUsersTasks = function() {
 	var userTaskDictionary = {};
-	this.tasks.forEach(function(taskGroup){
-		taskGroup.forEach(function(task){
+	this.tasks.forEach(function(taskGroup) {
+		taskGroup.forEach(function(task) {
 			if (task.assignee) {
 				if (!userTaskDictionary[task.assignee.id]) {
 					userTaskDictionary[task.assignee.id] = [];
