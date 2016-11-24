@@ -15,7 +15,7 @@ var slapp = Slapp({
   verify_token: process.env.SLACK_VERIFY_TOKEN,
   convo_store: ConvoStore(),
   context: Context()
-})
+});
 
 //*********************************************
 // Setup different handlers for messages
@@ -24,28 +24,35 @@ var slapp = Slapp({
 // FIXME temporary to test tasks generation
 slapp.message('tasks', ['mention'], (msg) => {
   bot.listTasks(msg, false);
-})
+});
 
-slapp.message('listMine', ['mention'], (msg) => {
-  bot.filterAndListUserTasksPM(msg.meta.user_id);
-})
+slapp.message('my tasks', ['direct_message'], (msg) => {
+  bot.listUserTasks(msg.meta.user_id);
+});
 
-slapp.action('update_task_callback', 'pick', (msg, value) => {
-  console.log(msg);
-  // the task group id is msg.body.attachment_id - 1
-  bot.updateTask(msg.body.user, msg.body.attachment_id - 1, value);
-})
+slapp.action('user_tasks_list_callback', 'done', (msg, value) => {
+  // the task index is msg.body.attachment_id - 1
+  bot.completeTask(msg.body.attachment_id - 1);
+  // TODO remove attachment from message
+  // TODO give reward
+});
 
-slapp.action('pick_task_callback', 'pick', (msg, value) => {
-  console.log(msg);
-  // the task group id is msg.body.attachment_id - 1
-  bot.assignTask(msg.body.user, msg.body.attachment_id - 1, value);
-  // list the tasks again to remove the button
+slapp.action('user_tasks_list_callback', 'unpick', (msg, value) => {
+  // the task indexis msg.body.attachment_id - 1
+  bot.unassignTask(msg.body.attachment_id - 1);
+  // TODO remove attachment from message
+  // TODO try to reassign the task
+});
+
+slapp.action('tasks_list_callback', 'pick', (msg, value) => {
+  // the task index is msg.body.attachment_id - 1
+  bot.assignTask(msg.body.user, msg.body.attachment_id - 1);
+  // list the tasks again to remove the task
   bot.listTasks(msg, true);
-})
+});
 
 // attach Slapp to express server
-var server = slapp.attachToExpress(express())
+var server = slapp.attachToExpress(express());
 
 // start http server
 server.listen(port, (err) => {
@@ -54,4 +61,4 @@ server.listen(port, (err) => {
   }
   console.log(`Listening on port ${port}`);
   bot.generateTasks();
-})
+});

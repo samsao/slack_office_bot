@@ -55,122 +55,136 @@ Bot.prototype.generateTasks = function() {
 }
 
 /**
- * Lists the tasks
+ * Lists the tasks in the channel
  *
  * @param msg Slack message
  * @param replace boolean to know if the message should be replaced or not
  */
 Bot.prototype.listTasks = function(msg, replace) {
-		// create the attachments
-		var currentDay = this.util.currentDay();
-		var attachments = [];
-		var msgTitle = 'Here are the tasks for the day:';
-		//If not a valid day in the array should be empty tasks
-		var tasksToList = this.tasks[currentDay];
-		if (tasksToList) {
-			attachments = this.getTaskAvailableListMessageAttachments(tasksToList);
-		} else {
-			msgTitle = 'There are no tasks for today! :beers:';
-		}
-
-		if (replace) {
-			msg.respond({
-				text: msgTitle,
-				attachments: attachments,
-			});
-		} else {
-			msg.say({
-				text: msgTitle,
-				attachments: attachments,
-			});
-		}
-	}
-	/**
-	 * get a list of attachments to post based on tasks
-	 *
-	 * @param tasks tasks to be sent in the message
-	 * @return formatted attachment to post as message
-	 */
-Bot.prototype.getTaskAvailableListMessageAttachments = function(tasks) {
-		var action = new TaskMessageAction('Pick', 'Pick', 'button', 0);
-		var attachments = this.createTaskListMessageAttachments(tasks, 'pick_task_callback', [action], true);
-		return attachments;
-	}
-	/**
-	 * Get tasks for that user and list them in Private message
-	 *
-	 * @param tasks tasks to be sent in the message
-	 */
-Bot.prototype.filterAndListUserTasksPM = function(userID) {
-	var tasksDictionary = this.getUsersTasks();
-	var userTasks = tasksDictionary[userID];
-	this.listUserTasksPM(userTasks, userID);
-}
-
-/**
- * list the tasks to the user in Private message
- *
- * @param tasks tasks to be sent in the message
- * @param callbackID id of the user to send the messages
- 
- */
-Bot.prototype.listUserTasksPM = function(userTasks, userID) {
-	var unpickAction = new TaskMessageAction('Unpick', 'Unpick', 'button', 0);
-	var doneAction = new TaskMessageAction('Done', 'Finish', 'button', 1);
-	var attachments = this.createTaskListMessageAttachments(userTasks, 'update_task_callback', [unpickAction, doneAction], false);
-
-	this.webClient.chat.postMessage(userID,
-		'Here is a list of your tasks:', {
-			attachments: attachments,
-			as_user: true
-		},
-		function(err, res) {
-			if (err) {
-				console.log('Error:', err);
-			} else {
-				console.log('Message sent: ', res);
-			}
-		});
-}
-
-/**
- * create a list of message attachment based on a array of tasks
- *
- * @param tasks tasks to be sent in the message
- * @param callbackID callback to listen to the response
- * @param actions actions for this tasks
- * @param checkAsignee boolean indicating if should check assignee or not to display actions
- */
-Bot.prototype.createTaskListMessageAttachments = function(tasks, callbackID, actions, checkAsignee) {
+	// create the attachments
+	var currentDay = this.util.currentDay();
 	var attachments = [];
+	var msgTitle = 'Here are the tasks for the day:';
+	//If not a valid day in the array should be empty tasks
+	var tasksToList = this.tasks[currentDay];
+	if (tasksToList) {
+		attachments = this.getTasksListMessageAttachments(tasksToList);
+	} else {
+		msgTitle = 'There are no tasks for today! :beers:';
+	}
+
+	if (replace) {
+		msg.respond({
+			text: msgTitle,
+			attachments: attachments,
+		});
+	} else {
+		msg.say({
+			text: msgTitle,
+			attachments: attachments,
+		});
+	}
+}
+
+/**
+ * Get the attachments for tasks listing message
+ *
+ * @param tasks tasks to be sent in the message
+ * @return formatted attachment to post as message
+ */
+Bot.prototype.getTasksListMessageAttachments = function(tasks) {
+	var attachments = [];
+	var actions = [];
+	actions.push(new TaskMessageAction('pick', 'Pick', 'button', 'pick'));
 	for (var i in tasks) {
 		var task = tasks[i];
-		var actions = [];
-
-		if (!checkAsignee || !task.assignee) {
-			for (var j in actions) {
-				actions.push({
-					name: actions[j].name,
-					text: actions[j].text,
-					type: actions[j].type,
-					value: actions[j].value
-				});
-			}
+		if (!task.assignee) {
+			attachments.push(this.getTaskMessageAttachment(task, 'tasks_list_callback', actions));
 		}
-		attachments.push({
-			title: task.title,
-			text: task.description,
-			fields: [{
-				title: "Tacos",
-				value: task.tacos,
-				short: true
-			}],
-			callback_id: callbackID,
-			attachment_type: "default",
-			actions: actions
+	}
+	return attachments;
+}
+
+/**
+ * Lists tasks for a given user. Sent in a private message.
+ *
+ * @param user_id id of the user
+ */
+Bot.prototype.listUserTasks = function(user_id) {
+	// FIXME IMO not very optimal to generate this array when only tasks for one user are required
+	var tasksDictionary = this.getUsersTasks();
+	var tasks = tasksDictionary[user_id];
+	if (tasks) {
+		this.webClient.chat.postMessage(user_id,
+			'Here are your tasks for today:', {
+				attachments: this.getUserTasksListMessageAttachments(tasks),
+				as_user: true
+			},
+			function(err, res) {
+				if (err) {
+					console.log('Error:', err);
+				}
+			});
+	} else {
+		this.webClient.chat.postMessage(user_id,
+			'You don\'t have any task today! :beer:', {
+				as_user: true
+			},
+			function(err, res) {
+				if (err) {
+					console.log('Error:', err);
+				}
+			});
+	}
+}
+
+/**
+ * Creates a list of message attachments based on a array of tasks
+ *
+ * @param tasks tasks to be sent in the message
+ * @param callback_id callback to listen to the response
+ * @param actions actions for this tasks
+ */
+Bot.prototype.getUserTasksListMessageAttachments = function(tasks) {
+	var attachments = [];
+	var actions = [];
+	actions.push(new TaskMessageAction('unpick', 'Unpick', 'button', 'unpick'));
+	actions.push(new TaskMessageAction('done', 'Done', 'button', 'done'));
+	for (var i in tasks) {
+		attachments.push(this.getTaskMessageAttachment(tasks[i], 'user_tasks_list_callback', actions));
+	}
+	return attachments;
+}
+
+/**
+ * Returns the message attachment for a task
+ *
+ * @param task The task itself
+ * @param callback_id callback to listen to the response
+ * @param taskActions actions for this task
+ */
+Bot.prototype.getTaskMessageAttachment = function(task, callback_id, taskActions) {
+	var actions = [];
+	for (var i in taskActions) {
+		actions.push({
+			name: taskActions[i].name,
+			text: taskActions[i].text,
+			type: taskActions[i].type,
+			value: taskActions[i].value
 		});
 	}
-	return attachments
+	return {
+		title: task.title,
+		text: task.description,
+		fields: [{
+			title: "Tacos",
+			value: task.tacos,
+			short: true
+		}],
+		callback_id: callback_id,
+		attachment_type: "default",
+		actions: actions
+	};
 }
 
 /**
@@ -178,38 +192,30 @@ Bot.prototype.createTaskListMessageAttachments = function(tasks, callbackID, act
  *
  * @param user JSON representing a user returned by slack API
  * @param index index of task on today's list
- * @param value selected value of the action
  */
-Bot.prototype.assignTask = function(user, index, value) {
-
-	var day = this.util.currentDay()
-	var task = this.getTask(index, day);
-	if (task) {
-		task.assignee = new User(user.id, user.name);
-	}
+Bot.prototype.assignTask = function(user, index) {
+	var task = this.getTask(index, this.util.currentDay());
+	task.assignee = new User(user.id, user.name);
 }
 
 /**
- * update a task
+ * Unassign a task
  *
- * @param user JSON representing a user returned by slack API
  * @param index index of task on today's list
- * @param value selected value of the action
  */
-Bot.prototype.updateTask = function(user, index, value) {
-	var day = this.util.currentDay()
-	var task = this.getTask(index, day);
-	if (task) {
-		//Unpick
-		if (value == 0) {
-			task.assignee = null;
-			/** TODO: list tasks again in a channel*/
-		} else {
-			//finish
-			task.done = true;
-		}
-	}
+Bot.prototype.unassignTask = function(index) {
+	var task = this.getTask(index, this.util.currentDay());
+	task.assignee = null;
+}
 
+/**
+ * Complete a task
+ *
+ * @param index index of task on today's list
+ */
+Bot.prototype.completeTask = function(index) {
+	var task = this.getTask(index, this.util.currentDay());
+	task.done = true;
 }
 
 /**
@@ -243,17 +249,33 @@ Bot.prototype.initializeWebClient = function() {
 	});
 }
 
+/**
+ * TODO Setup reccurent tasks (what is it?)
+ *
+ */
 Bot.prototype.setupRecurrentTasks = function() {
 	var scheduler = new Scheduler();
 	this.setupTaskReminder(scheduler);
 	this.setupTaskGeneration(scheduler);
 }
+
+/**
+ * TODO Setup task reminder (what is it?)
+ *
+ * @param remindScheduler TODO
+ */
 Bot.prototype.setupTaskReminder = function(remindScheduler) {
 	var self = this;
 	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [21], [0], function() {
 		self.remindUserTasks();
 	});
 }
+
+/**
+ * TODO Setup task generation (what is it?)
+ *
+ * @param remindScheduler TODO
+ */
 Bot.prototype.setupTaskGeneration = function(remindScheduler) {
 	var self = this;
 	remindScheduler.scheduleCallback([1], [8], [30], function() {
@@ -261,17 +283,23 @@ Bot.prototype.setupTaskGeneration = function(remindScheduler) {
 	});
 }
 
-/*
-	Remind all users of their tasks in private channel
+/**
+ * Reminds all users of their tasks in private message.
+ *
  */
 Bot.prototype.remindUserTasks = function() {
 	var usersTasks = this.getUsersTasks();
-	for (var userID in usersTasks) {
-		var formatedTasks = this.listUserTasksPM([usersTasks[userID]], userID);
-		this.listUserTasksPM(formatedTasks, userID);
+	for (var user_id in usersTasks) {
+		// FIXME
+		// var formatedTasks = this.listUserTasksPM([usersTasks[user_id]], user_id);
+		// this.listUserTasksPM(formatedTasks, user_id);
 	}
 }
 
+/**
+ * Returns a dictionnary of tasks where keys are user_id
+ *
+ */
 Bot.prototype.getUsersTasks = function() {
 	var userTaskDictionary = {};
 	this.tasks.forEach(function(taskGroup) {
@@ -284,7 +312,7 @@ Bot.prototype.getUsersTasks = function() {
 			}
 		});
 	});
-	return userTaskDictionary
+	return userTaskDictionary;
 }
 
 module.exports = Bot;
