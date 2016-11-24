@@ -26,6 +26,16 @@ slapp.message('tasks', ['mention'], (msg) => {
   bot.listTasks(msg, false);
 })
 
+slapp.message('listMine', ['mention'], (msg) => {
+  bot.filterAndListUserTasksPM(msg.meta.user_id);
+})
+
+slapp.action('update_task_callback', 'pick', (msg, value) => {
+  console.log(msg);
+  // the task group id is msg.body.attachment_id - 1
+  bot.updateTask(msg.body.user, msg.body.attachment_id - 1, value);
+})
+
 slapp.action('pick_task_callback', 'pick', (msg, value) => {
   console.log(msg);
   // the task group id is msg.body.attachment_id - 1
