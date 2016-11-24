@@ -10,7 +10,7 @@ const Task = require('./model/task.js');
 const User = require('./model/user.js');
 const Util = require('./util.js');
 const WebClient = require('@slack/client').WebClient;
-var Scheduler = require('./messageScheduler.js')
+const Scheduler = require('./messageScheduler.js')
 
 function Bot() {
 	// tasks is a two-dimensional array where the first dimension is the group
@@ -23,7 +23,7 @@ function Bot() {
 	this.initializeWebClient();
 
 	//As soon as the bot start it should setup the reminder.
-	this.setupTaskReminder()
+	this.setupTaskReminder();
 }
 
 /**
@@ -62,14 +62,14 @@ Bot.prototype.generateTasks = function() {
 Bot.prototype.listTasks = function(msg, replace) {
 	// create the attachments
 	var currentDay = this.util.currentDay();
-	var attachments = []
+	var attachments = [];
 	var msgTitle = 'Here are the tasks for the day:';
 	//If not a valid day in the array should be empty tasks
-	if (currentDay >= 0 && currentDay <=4) {
-		var tasksToList = this.tasks[this.util.currentDay()]
-		attachments = this.formatTasks(tasksToList)
+	var tasksToList = this.tasks[currentDay];
+	if (tasksToList) {
+		attachments = this.formatTasks(tasksToList);
 	} else {
-		msgTitle = 'There are no tasks for today! :beers:'
+		msgTitle = 'There are no tasks for today! :beers:';
 	}
 
 	if (replace) {
@@ -87,15 +87,15 @@ Bot.prototype.listTasks = function(msg, replace) {
 
 Bot.prototype.formatTasks = function(tasks) {
 	var attachments = [];
-	var taskDay = this.util.currentDay()
+	var taskDay = this.util.currentDay();
 	for (var i in tasks) {
-		var task = tasks[i]
+		var task = tasks[i];
 		var actions = [];
 
 		if (!task.assignee) {
 			actions.push({
 				name: "pick",
-				text: "Pick Task",
+				text: "Pick",
 				type: "button",
 				value: taskDay
 			});
@@ -121,11 +121,11 @@ Bot.prototype.formatTasks = function(tasks) {
  * Assign a task
  *
  * @param user JSON representing a user returned by slack API
- * @param groupId task group id
+ * @param index index of task on today's list
  * @param day selected day of the task
  */
-Bot.prototype.assignTask = function(user, groupId, day) {
-	var task = this.getTask(groupId, day);
+Bot.prototype.assignTask = function(user, index, day) {
+	var task = this.getTask(index, day);
 	if (task) {
 		task.assignee = new User(user.id, user.name);
 	}
@@ -134,13 +134,13 @@ Bot.prototype.assignTask = function(user, groupId, day) {
 /**
  * Get a task by group id and day
  *
- * @param groupId task group id
+ * @param index index of task on today's list
  * @param day selected day of the task
  * @return Task
  */
-Bot.prototype.getTask = function(groupId, day) {
+Bot.prototype.getTask = function(index, day) {
 	var tasks = this.tasks[day];
-	return tasks[groupId]
+	return tasks[index];
 }
 
 /**
@@ -183,18 +183,18 @@ Bot.prototype.sendMessageTest = function(userID) {
 }
 
 Bot.prototype.setupTaskReminder = function() {
-	var remindScheduler = new Scheduler()
-	var self = this
-	remindScheduler.scheduleCallback([1,2,3,4,5],21, function() {
+	var remindScheduler = new Scheduler();
+	var self = this;
+	remindScheduler.scheduleCallback([1,2,3,4,5],[21], function() {
 		self.remindUserTasks();
 	});
 }
 
 Bot.prototype.remindUserTasks = function() {
-	var usersTasks = this.getUsersTasks()
+	var usersTasks = this.getUsersTasks();
 	for(var userID in usersTasks) {
 		//FIXME: Setup proper format and callback
-		let formatedTasks = this.formatTasks([usersTasks[userID]])
+		var formatedTasks = this.formatTasks([usersTasks[userID]]);
 		this.webClient.chat.postMessage(userID,
 		'Here is a list of your tasks:', {
 			attachments: formatedTasks,
