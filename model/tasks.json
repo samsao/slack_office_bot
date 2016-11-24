@@ -3,6 +3,12 @@
 		"title": "My first task",
 		"description": "It's sooooo fun",
 		"tacos": 1,
-		"days": [1, 2, 3, 4, 5]
+		"days": [0, 1, 2, 3, 4]
+	},
+	{
+		"title": "My Second task",
+		"description": "It's sooooo fun 2",
+		"tacos": 2,
+		"days": [0, 1, 2, 3, 4]
 	}]
 }

@@ -10,6 +10,7 @@ const Task = require('./model/task.js');
 const User = require('./model/user.js');
 const Util = require('./util.js');
 const WebClient = require('@slack/client').WebClient;
+const Scheduler = require('./messageScheduler.js')
 
 function Bot() {
 	// tasks is a two-dimensional array where the first dimension is the group
@@ -20,6 +21,9 @@ function Bot() {
 	this.client = new Client();
 	this.client.registerMethod("slackTeams", "https://beepboophq.com/api/v1/slack-teams", "GET");
 	this.initializeWebClient();
+
+	//As soon as the bot start it should setup the reminder.
+	this.setupTaskReminder();
 }
 
 /**
@@ -27,20 +31,25 @@ function Bot() {
  */
 Bot.prototype.generateTasks = function() {
 	// empty the tasks first
-	this.tasks = [];
+	this.tasks = new Array(5);
+	
 	// read the JSON file
 	var tasksJSON = JSON.parse(Fs.readFileSync('model/tasks.json', 'utf8')).tasks;
+
+	//Create new array to hold tasks
+	for(var i = 0; i < 5;i++){
+		this.tasks[i] = [];
+	} 
+	//insert tasks in the array
 	for (var i in tasksJSON) {
 		var title = tasksJSON[i].title;
 		var description = tasksJSON[i].description;
 		var tacos = tasksJSON[i].tacos;
 		var days = tasksJSON[i].days;
-		var tasks = [];
 		for (var j in days) {
 			var task = new Task(title, description, tacos, days[j]);
-			tasks.push(task);
+			this.tasks[j].push(task);
 		}
-		this.tasks.push(tasks);
 	}
 }
 
@@ -52,75 +61,86 @@ Bot.prototype.generateTasks = function() {
  */
 Bot.prototype.listTasks = function(msg, replace) {
 	// create the attachments
+	var currentDay = this.util.currentDay();
 	var attachments = [];
-	for (var i in this.tasks) {
-		var tasks = this.tasks[i];
+	var msgTitle = 'Here are the tasks for the day:';
+	//If not a valid day in the array should be empty tasks
+	var tasksToList = this.tasks[currentDay];
+	if (tasksToList) {
+		attachments = this.formatTasks(tasksToList);
+	} else {
+		msgTitle = 'There are no tasks for today! :beers:';
+	}
+
+	if (replace) {
+		msg.respond({
+			text: msgTitle,
+			attachments: attachments,
+		});
+	} else {
+		msg.say({
+			text: msgTitle,
+			attachments: attachments,
+		});
+	}
+}
+
+Bot.prototype.formatTasks = function(tasks) {
+	var attachments = [];
+	var taskDay = this.util.currentDay();
+	for (var i in tasks) {
+		var task = tasks[i];
 		var actions = [];
-		for (var j in tasks) {
-			var task = tasks[j];
-			if (!task.assignee) {
-				actions.push({
-					name: "pick",
-					text: "Pick " + this.util.dayNames[task.day],
-					type: "button",
-					value: task.day
-				});
-			}
+
+		if (!task.assignee) {
+			actions.push({
+				name: "pick",
+				text: "Pick",
+				type: "button",
+				value: taskDay
+			});
 		}
+
 		attachments.push({
-			title: tasks[0].title,
-			text: tasks[0].description,
+			title: task.title,
+			text: task.description,
 			fields: [{
 				title: "Tacos",
-				value: tasks[0].tacos,
+				value: task.tacos,
 				short: true
 			}],
 			callback_id: "pick_task_callback",
 			attachment_type: "default",
 			actions: actions
 		});
-	};
-
-	if (replace) {
-		msg.respond({
-			text: 'Here are the tasks for the week:',
-			attachments: attachments,
-		});
-	} else {
-		msg.say({
-			text: 'Here are the tasks for the week:',
-			attachments: attachments,
-		});
 	}
+	return attachments
 }
 
 /**
  * Assign a task
  *
  * @param user JSON representing a user returned by slack API
- * @param groupId task group id
+ * @param index index of task on today's list
  * @param day selected day of the task
  */
-Bot.prototype.assignTask = function(user, groupId, day) {
-	var task = this.getTask(groupId, day);
-	task.assignee = new User(user.id, user.name);
+Bot.prototype.assignTask = function(user, index, day) {
+	var task = this.getTask(index, day);
+	if (task) {
+		task.assignee = new User(user.id, user.name);
+	}
 }
 
 /**
  * Get a task by group id and day
  *
- * @param groupId task group id
+ * @param index index of task on today's list
  * @param day selected day of the task
  * @return Task
  */
-Bot.prototype.getTask = function(groupId, day) {
-	var tasks = this.tasks[groupId];
-	for (var i in tasks) {
-		if (tasks[i].day == day) {
-			return tasks[i];
-		}
-	}
-	return null;
+Bot.prototype.getTask = function(index, day) {
+	var tasks = this.tasks[day];
+	return tasks[index];
 }
 
 /**
@@ -147,9 +167,10 @@ Bot.prototype.initializeWebClient = function() {
  * Good news: it works :)
  *
  */
-Bot.prototype.sendMessageTest = function() {
-	this.webClient.chat.postMessage('G3466NZT4',
-		'Hello everyone!!!!', {
+Bot.prototype.sendMessageTest = function(userID) {
+	// this.webClient.chat.sendMessage('Hello ' + user.name + '!', userID);
+	this.webClient.chat.postMessage(userID,
+		'You are really a peste', {
 			as_user: true
 		},
 		function(err, res) {
@@ -159,6 +180,49 @@ Bot.prototype.sendMessageTest = function() {
 				console.log('Message sent: ', res);
 			}
 		});
+}
+
+Bot.prototype.setupTaskReminder = function() {
+	var remindScheduler = new Scheduler();
+	var self = this;
+	remindScheduler.scheduleCallback([1,2,3,4,5],[21], function() {
+		self.remindUserTasks();
+	});
+}
+
+Bot.prototype.remindUserTasks = function() {
+	var usersTasks = this.getUsersTasks();
+	for(var userID in usersTasks) {
+		//FIXME: Setup proper format and callback
+		var formatedTasks = this.formatTasks([usersTasks[userID]]);
+		this.webClient.chat.postMessage(userID,
+		'Here is a list of your tasks:', {
+			attachments: formatedTasks,
+			as_user: true
+		},
+		function(err, res) {
+			if (err) {
+				console.log('Error:', err);
+			} else {
+				console.log('Message sent: ', res);
+			}
+		});
+	}
+}
+
+Bot.prototype.getUsersTasks = function() {
+	var userTaskDictionary = {};
+	this.tasks.forEach(function(taskGroup){
+		taskGroup.forEach(function(task){
+			if (task.assignee) {
+				if (!userTaskDictionary[task.assignee.id]) {
+					userTaskDictionary[task.assignee.id] = []
+				}
+				userTaskDictionary[task.assignee.id].push(task)
+			}
+		});
+	});
+	return userTaskDictionary
 }
 
 module.exports = Bot;
