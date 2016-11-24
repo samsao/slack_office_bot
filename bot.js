@@ -16,7 +16,6 @@ function Bot() {
 	// tasks is a two-dimensional array where the first dimension is the group
 	// and the second dimension are the tasks in the group.
 	// It is to make it easier to group recurring tasks.
-
 	this.tasks = [];
 	this.util = new Util();
 	this.client = new Client();
@@ -32,21 +31,25 @@ function Bot() {
  */
 Bot.prototype.generateTasks = function() {
 	// empty the tasks first
-	this.tasks = [];
-
+	this.tasks = new Array(5);
+	
 	// read the JSON file
 	var tasksJSON = JSON.parse(Fs.readFileSync('model/tasks.json', 'utf8')).tasks;
+
+	//Create new array to hold tasks
+	for(var i = 0; i < 5;i++){
+		this.tasks[i] = [];
+	} 
+	//insert tasks in the array
 	for (var i in tasksJSON) {
 		var title = tasksJSON[i].title;
 		var description = tasksJSON[i].description;
 		var tacos = tasksJSON[i].tacos;
 		var days = tasksJSON[i].days;
-		var tasks = [];
 		for (var j in days) {
 			var task = new Task(title, description, tacos, days[j]);
-			tasks.push(task);
+			this.tasks[j].push(task);
 		}
-		this.tasks.push(tasks);
 	}
 }
 
@@ -58,7 +61,8 @@ Bot.prototype.generateTasks = function() {
  */
 Bot.prototype.listTasks = function(msg, replace) {
 	// create the attachments
-	var attachments = this.formatTasks(this.tasks)
+	var tasksToList = this.tasks[this.util.currentDay()]
+	var attachments = this.formatTasks(tasksToList)
 
 	if (replace) {
 		msg.respond({
@@ -75,33 +79,33 @@ Bot.prototype.listTasks = function(msg, replace) {
 
 Bot.prototype.formatTasks = function(tasks) {
 	var attachments = [];
+	var taskDay = this.util.currentDay()
 	for (var i in tasks) {
-		var tasks = tasks[i];
+		var task = tasks[i]
 		var actions = [];
-		for (var j in tasks) {
-			var task = tasks[j];
-			if (!task.assignee) {
-				actions.push({
-					name: "pick",
-					text: "Pick " + this.util.dayNames[task.day],
-					type: "button",
-					value: task.day
-				});
-			}
+
+		if (!task.assignee) {
+			actions.push({
+				name: "pick",
+				text: "Pick Task",
+				type: "button",
+				value: taskDay
+			});
 		}
+
 		attachments.push({
-			title: tasks[0].title,
-			text: tasks[0].description,
+			title: task.title,
+			text: task.description,
 			fields: [{
 				title: "Tacos",
-				value: tasks[0].tacos,
+				value: task.tacos,
 				short: true
 			}],
 			callback_id: "pick_task_callback",
 			attachment_type: "default",
 			actions: actions
 		});
-	};
+	}
 	return attachments
 }
 
@@ -114,7 +118,9 @@ Bot.prototype.formatTasks = function(tasks) {
  */
 Bot.prototype.assignTask = function(user, groupId, day) {
 	var task = this.getTask(groupId, day);
-	task.assignee = new User(user.id, user.name);
+	if (task) {
+		task.assignee = new User(user.id, user.name);
+	}
 }
 
 /**
@@ -125,13 +131,8 @@ Bot.prototype.assignTask = function(user, groupId, day) {
  * @return Task
  */
 Bot.prototype.getTask = function(groupId, day) {
-	var tasks = this.tasks[groupId];
-	for (var i in tasks) {
-		if (tasks[i].day == day) {
-			return tasks[i];
-		}
-	}
-	return null;
+	var tasks = this.tasks[day];
+	return tasks[groupId]
 }
 
 /**
@@ -205,11 +206,11 @@ Bot.prototype.getUsersTasks = function() {
 	var userTaskDictionary = {};
 	this.tasks.forEach(function(taskGroup){
 		taskGroup.forEach(function(task){
-			if (task.assignee != null) {
-				if (userTaskDictionary[task.assignee.id] == null) {
+			if (task.assignee) {
+				if (!userTaskDictionary[task.assignee.id]) {
 					userTaskDictionary[task.assignee.id] = []
 				}
-				userTaskDictionary[task.assignee].push(task)
+				userTaskDictionary[task.assignee.id].push(task)
 			}
 		});
 	});
