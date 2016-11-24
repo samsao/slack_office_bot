@@ -12,6 +12,7 @@ Scheduler.prototype.scheduleCallback = function (weekdays,hour,callback) {
     var rule = new schedule.RecurrenceRule();
     rule.dayOfWeek = weekdays
     rule.hour = hour
+    rule.minute = 0
 
     var j = schedule.scheduleJob(rule, function(){
         callback();
