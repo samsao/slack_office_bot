@@ -7,6 +7,7 @@
 const Fs = require('fs');
 const Client = require('node-rest-client').Client;
 const Task = require('./model/task.js');
+const TaskAction = require('./model/taskAction.js');
 const User = require('./model/user.js');
 const Util = require('./util.js');
 const WebClient = require('@slack/client').WebClient;
@@ -85,20 +86,51 @@ Bot.prototype.listTasks = function(msg, replace) {
 	}
 }
 
-Bot.prototype.formatTasks = function(tasks) {
+Bot.prototype.formatTasksToPick = function(tasks) {
+	var action = new TaskAction('Pick','Pick task','button', 0);
+	var formatedTasks = formatTasks(userTasks, 'pick_task_callback',[action]);
+	return formatedTasks
+}
+Bot.prototype.filterAndListUserTasksPM = function(userID) {
+	var tasksDictionary = this.getUsersTasks();
+	var userTasks = tasksDictionary[userID];
+	this.listUserTasksPM(userTasks, userID);
+}
+
+Bot.prototype.listUserTasksPM = function(userTasks, userID) {
+	var unpickAction = new TaskAction('Pick','Pick task','button', 0);
+	var doneAction = new TaskAction('Done','Finish task','button', 1);
+	var formatedTasks = formatTasks(userTasks, 'update_task_callback',[unpickAction,doneAction]);
+
+	this.webClient.chat.postMessage(userID,
+		'Here is a list of your tasks:', {
+			attachments: formatedTasks,
+			as_user: true
+		},
+		function(err, res) {
+			if (err) {
+				console.log('Error:', err);
+			} else {
+				console.log('Message sent: ', res);
+			}
+		});
+}
+
+Bot.prototype.formatTasks = function(tasks, callbackID, taskActions) {
 	var attachments = [];
-	var taskDay = this.util.currentDay();
 	for (var i in tasks) {
 		var task = tasks[i];
 		var actions = [];
 
 		if (!task.assignee) {
-			actions.push({
-				name: "pick",
-				text: "Pick",
-				type: "button",
-				value: taskDay
-			});
+			for (var action in taskActions) {
+				actions.push({
+					name: action.name,
+					text: action.text,
+					type: action.type,
+					value: action.value
+				});
+			}
 		}
 
 		attachments.push({
@@ -109,7 +141,7 @@ Bot.prototype.formatTasks = function(tasks) {
 				value: task.tacos,
 				short: true
 			}],
-			callback_id: "pick_task_callback",
+			callback_id: callbackID,
 			attachment_type: "default",
 			actions: actions
 		});
@@ -122,15 +154,43 @@ Bot.prototype.formatTasks = function(tasks) {
  *
  * @param user JSON representing a user returned by slack API
  * @param index index of task on today's list
- * @param day selected day of the task
+ * @param value selected value of the action
  */
-Bot.prototype.assignTask = function(user, index, day) {
+Bot.prototype.assignTask = function(user, index, value) {
+
+	var day = this.util.currentDay()
 	var task = this.getTask(index, day);
 	if (task) {
 		task.assignee = new User(user.id, user.name);
 	}
 }
 
+/**
+ * update a task
+ *
+ * @param user JSON representing a user returned by slack API
+ * @param groupId task group id
+ * @param value selected value of the action
+ */
+Bot.prototype.updateTask = function(user, groupId, value) {
+	var day = this.util.currentDay()
+	var task = this.getTask(groupId, day);
+	if (task) {
+		//Unpick
+		if (value == 0) {
+			task.assignee = null;
+			/** TODO: list tasks again in a channel*/
+		} else {
+			//finish
+			task.done = true;
+		}
+	}
+
+}
+
+Bot.prototype.unpickTask = function(task) {
+
+}
 /**
  * Get a task by group id and day
  *
@@ -190,23 +250,15 @@ Bot.prototype.setupTaskReminder = function() {
 	});
 }
 
+/*
+	Remind all users of their tasks in private channel
+ */
 Bot.prototype.remindUserTasks = function() {
 	var usersTasks = this.getUsersTasks();
 	for(var userID in usersTasks) {
 		//FIXME: Setup proper format and callback
-		var formatedTasks = this.formatTasks([usersTasks[userID]]);
-		this.webClient.chat.postMessage(userID,
-		'Here is a list of your tasks:', {
-			attachments: formatedTasks,
-			as_user: true
-		},
-		function(err, res) {
-			if (err) {
-				console.log('Error:', err);
-			} else {
-				console.log('Message sent: ', res);
-			}
-		});
+		let formatedTasks = this.formatTasks([usersTasks[userID]])
+		this.listUserTasksPM(formatedTasks,userID)
 	}
 }
 
