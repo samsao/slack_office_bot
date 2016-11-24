@@ -61,17 +61,25 @@ Bot.prototype.generateTasks = function() {
  */
 Bot.prototype.listTasks = function(msg, replace) {
 	// create the attachments
-	var tasksToList = this.tasks[this.util.currentDay()]
-	var attachments = this.formatTasks(tasksToList)
+	var currentDay = this.util.currentDay();
+	var attachments = []
+	var msgTitle = 'Here are the tasks for the day:';
+	//If not a valid day in the array should be empty tasks
+	if (currentDay >= 0 && currentDay <=4) {
+		var tasksToList = this.tasks[this.util.currentDay()]
+		attachments = this.formatTasks(tasksToList)
+	} else {
+		msgTitle = 'There are no tasks for today! :beers:'
+	}
 
 	if (replace) {
 		msg.respond({
-			text: 'Here are the tasks for the week:',
+			text: msgTitle,
 			attachments: attachments,
 		});
 	} else {
 		msg.say({
-			text: 'Here are the tasks for the week:',
+			text: msgTitle,
 			attachments: attachments,
 		});
 	}

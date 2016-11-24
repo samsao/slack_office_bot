@@ -19,13 +19,6 @@ function Util() {
 Util.prototype.currentDay = function() {
 	var date = new Date();
 	var day = date.getDay() - 1; //0 for us is monday
-	if (day < 0) {
-		day = 0;
-	} else {
-		if (day > 4) {
-			day = 4;
-		}
-	}
 	return day
 }
 module.exports = Util;
