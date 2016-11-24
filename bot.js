@@ -72,7 +72,6 @@ Bot.prototype.listTasks = function(msg, replace) {
 	} else {
 		msgTitle = 'There are no tasks for today! :beers:';
 	}
-	console.log(attachments)
 
 	if (replace) {
 		msg.respond({
@@ -268,8 +267,8 @@ Bot.prototype.setupTaskGeneration = function(remindScheduler) {
 Bot.prototype.remindUserTasks = function() {
 	var usersTasks = this.getUsersTasks();
 	for(var userID in usersTasks) {
-		let formatedTasks = this.listUserTasksPM([usersTasks[userID]],userID)
-		this.listUserTasksPM(formatedTasks,userID)
+		var formatedTasks = this.listUserTasksPM([usersTasks[userID]],userID);
+		this.listUserTasksPM(formatedTasks,userID);
 	}
 }
 
@@ -279,9 +278,9 @@ Bot.prototype.getUsersTasks = function() {
 		taskGroup.forEach(function(task){
 			if (task.assignee) {
 				if (!userTaskDictionary[task.assignee.id]) {
-					userTaskDictionary[task.assignee.id] = []
+					userTaskDictionary[task.assignee.id] = [];
 				}
-				userTaskDictionary[task.assignee.id].push(task)
+				userTaskDictionary[task.assignee.id].push(task);
 			}
 		});
 	});
