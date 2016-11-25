@@ -47,8 +47,9 @@ Bot.prototype.generateTasks = function() {
 		var description = tasksJSON[i].description;
 		var tacos = tasksJSON[i].tacos;
 		var days = tasksJSON[i].days;
+		var id = tasksJSON[i].id;
 		for (var j in days) {
-			var task = new Task(title, description, tacos, days[j]);
+			var task = new Task(id, title, description, tacos, days[j]);
 			this.tasks[j].push(task);
 		}
 	}
@@ -94,11 +95,10 @@ Bot.prototype.listTasks = function(msg, replace) {
  */
 Bot.prototype.getTasksListMessageAttachments = function(tasks) {
 	var attachments = [];
-	var actions = [];
-	actions.push(new TaskMessageAction('pick', 'Pick', 'button', 'pick'));
 	for (var i in tasks) {
 		var task = tasks[i];
 		if (!task.assignee) {
+			var actions = [new TaskMessageAction('pick', 'Pick', 'button', tasks[i].id)];
 			attachments.push(this.getTaskMessageAttachment(task, 'tasks_list_callback', actions));
 		}
 	}
@@ -114,6 +114,9 @@ Bot.prototype.listUserTasks = function(user_id) {
 	// FIXME IMO not very optimal to generate this array when only tasks for one user are required
 	var tasksDictionary = this.getUsersTasks();
 	var tasks = tasksDictionary[user_id];
+	console.log('user taks!')
+	console.log(tasks)
+	console.log(tasksDictionary)
 	if (tasks) {
 		this.webClient.chat.postMessage(user_id,
 			'Here are your tasks for today:', {
@@ -147,10 +150,10 @@ Bot.prototype.listUserTasks = function(user_id) {
  */
 Bot.prototype.getUserTasksListMessageAttachments = function(tasks) {
 	var attachments = [];
-	var actions = [];
-	actions.push(new TaskMessageAction('unpick', 'Unpick', 'button', 'unpick'));
-	actions.push(new TaskMessageAction('done', 'Done', 'button', 'done'));
 	for (var i in tasks) {
+		//I Think we rather create a new array than mutate it every loop, but not sure in js.
+		//change this if wrong or remove comment when validated.
+		var actions = [new TaskMessageAction('unpick', 'Unpick', 'button', tasks[i].id), new TaskMessageAction('done', 'Done', 'button', tasks[i].id)]
 		attachments.push(this.getTaskMessageAttachment(tasks[i], 'user_tasks_list_callback', actions));
 	}
 	return attachments;
@@ -191,43 +194,52 @@ Bot.prototype.getTaskMessageAttachment = function(task, callback_id, taskActions
  * Assign a task
  *
  * @param user JSON representing a user returned by slack API
- * @param index index of task on today's list
+ * @param task_id id of the task to be assigned
  */
-Bot.prototype.assignTask = function(user, index) {
-	var task = this.getTask(index, this.util.currentDay());
+Bot.prototype.assignTask = function(user, task_id) {
+	var task = this.getTask(task_id, this.util.currentDay());
 	task.assignee = new User(user.id, user.name);
 }
 
 /**
  * Unassign a task
  *
- * @param index index of task on today's list
+ * @param task_id id of task to unassign
  */
-Bot.prototype.unassignTask = function(index) {
-	var task = this.getTask(index, this.util.currentDay());
+Bot.prototype.unassignTask = function(task_id) {
+	var task = this.getTask(task_id, this.util.currentDay());
 	task.assignee = null;
 }
 
 /**
  * Complete a task
  *
- * @param index index of task on today's list
+ * @param task_id id of the completed task
  */
-Bot.prototype.completeTask = function(index) {
-	var task = this.getTask(index, this.util.currentDay());
+Bot.prototype.completeTask = function(task_id) {
+	var task = this.getTask(task_id, this.util.currentDay());
 	task.done = true;
 }
 
 /**
- * Get a task by group id and day
+ * Get a task by id and day
  *
- * @param index index of task on today's list
+ * @param task_id id of the task
  * @param day selected day of the task
  * @return Task
  */
-Bot.prototype.getTask = function(index, day) {
+Bot.prototype.getTask = function(task_id, day) {
 	var tasks = this.tasks[day];
-	return tasks[index];
+	for (var i in tasks) {
+		console.log('looping in the tasks!')
+		console.log(tasks[i])
+		console.log(task_id)
+		console.log(tasks[i].id)
+		if (tasks[i].id == task_id) {
+			return tasks[i];
+		}
+	}
+	return null;
 }
 
 /**
@@ -250,7 +262,7 @@ Bot.prototype.initializeWebClient = function() {
 }
 
 /**
- * TODO Setup reccurent tasks (what is it?)
+ *  Setup system recurrent tasks.
  *
  */
 Bot.prototype.setupRecurrentTasks = function() {
@@ -260,9 +272,9 @@ Bot.prototype.setupRecurrentTasks = function() {
 }
 
 /**
- * TODO Setup task reminder (what is it?)
+ * Setup a listing of user's own tasks every day at 9pm 
  *
- * @param remindScheduler TODO
+ * @param remindScheduler scheduler for task setup.
  */
 Bot.prototype.setupTaskReminder = function(remindScheduler) {
 	var self = this;
@@ -272,9 +284,9 @@ Bot.prototype.setupTaskReminder = function(remindScheduler) {
 }
 
 /**
- * TODO Setup task generation (what is it?)
+ * Setup task generation for every monday at 8:30 am
  *
- * @param remindScheduler TODO
+ * @param remindScheduler scheduler for task setup.
  */
 Bot.prototype.setupTaskGeneration = function(remindScheduler) {
 	var self = this;
