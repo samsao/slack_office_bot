@@ -39,7 +39,7 @@ slapp.action(Constants.UserTaskListCB, 'done', (msg, task_id) => {
 });
 
 slapp.action(Constants.UserTaskListCB, 'unpick', (msg, task_id) => {
-  bot.unassignTask(task_id);
+  bot.unassignTask(msg,task_id);
   // TODO remove attachment from message
   // TODO try to reassign the task
 });

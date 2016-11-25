@@ -240,13 +240,40 @@ Bot.prototype.assignTask = function(user, task_id) {
 }
 
 /**
- * Unassign a task
+ * Unassign a user from a task
  *
  * @param task_id id of task to unassign
  */
-Bot.prototype.unassignTask = function(task_id) {
+Bot.prototype.unassignUserFromTask = function(task_id) {
 	var task = this.getTask(task_id, this.util.currentDay());
 	task.assignee = null;
+}
+
+/**
+ * Unassign a task
+ *
+ * @param msg Slack message
+ * @param task_id id of task to unassign
+ */
+Bot.prototype.unassignTask = function(msg, task_id) {
+
+	var attachments = msg.body.original_message.attachments;
+	//FIXME: Add proper message.
+	var field = {
+		title: "",
+		value: "You unpicked the task. You\'re really a :hankey:",
+		short: false
+	}
+	var attachmentIndex = msg.body.attachment_id - 1;
+	attachments[attachmentIndex].actions = [];
+	attachments[attachmentIndex].fields.push(field);
+
+	this.unassignUserFromTask(task_id);
+	msg.respond({
+		text: msg.body.original_message.text,
+		attachments: attachments,
+	});
+
 }
 
 /**
@@ -258,6 +285,7 @@ Bot.prototype.completeTask = function(task_id) {
 	var task = this.getTask(task_id, this.util.currentDay());
 	task.done = true;
 }
+
 
 /**
  * Get a task by id and day
@@ -372,6 +400,22 @@ Bot.prototype.getUsersTasks = function() {
 		});
 	});
 	return userTaskDictionary;
+}
+
+/**
+ * Returns a list of tasks assigned to a user_id
+ *
+ */
+Bot.prototype.getUserTasks = function(user_id) {
+	var userTasks = [];
+	this.tasks.forEach(function(taskGroup) {
+		taskGroup.forEach(function(task) {
+			if (task.assignee && task.assignee.id == user_id) {
+				userTasks.push(task);
+			}
+		});
+	});
+	return userTasks;
 }
 
 module.exports = Bot;
