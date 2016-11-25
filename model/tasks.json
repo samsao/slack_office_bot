@@ -1,13 +1,13 @@
 {
 	"tasks": [{
-		"title": "My first task",
-		"description": "It's sooooo fun",
+		"title": "Clean my poop in the toilet",
+		"description": "It's nasty you're nasty",
 		"tacos": 1,
 		"days": [0, 1, 2, 3, 4]
 	},
 	{
-		"title": "My Second task",
-		"description": "It's sooooo fun 2",
+		"title": "Eat my shorts",
+		"description": "Because Bart said it",
 		"tacos": 2,
 		"days": [0, 1, 2, 3, 4]
 	}]
