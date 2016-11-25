@@ -5,7 +5,8 @@
 /**
  * Constructor
  */
-var Task = function(title, description, tacos, day) {
+var Task = function(id, title, description, tacos, day) {
+	this.id = id
 	this.title = title;
 	this.description = description;
 	this.tacos = tacos;

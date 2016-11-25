@@ -1,11 +1,13 @@
 {
 	"tasks": [{
+		"id": 1,
 		"title": "Clean my poop in the toilet",
 		"description": "It's nasty you're nasty",
 		"tacos": 1,
 		"days": [0, 1, 2, 3, 4]
 	},
 	{
+		"id": 2,
 		"title": "Eat my shorts",
 		"description": "Because Bart said it",
 		"tacos": 2,

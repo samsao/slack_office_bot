@@ -30,23 +30,22 @@ slapp.message('my tasks', ['direct_message'], (msg) => {
   bot.listUserTasks(msg.meta.user_id);
 });
 
-slapp.action('user_tasks_list_callback', 'done', (msg, value) => {
-  // the task index is msg.body.attachment_id - 1
-  bot.completeTask(msg.body.attachment_id - 1);
+slapp.action('user_tasks_list_callback', 'done', (msg, task_id) => {
+
+  bot.completeTask(task_id);
   // TODO remove attachment from message
   // TODO give reward
 });
 
-slapp.action('user_tasks_list_callback', 'unpick', (msg, value) => {
-  // the task indexis msg.body.attachment_id - 1
-  bot.unassignTask(msg.body.attachment_id - 1);
+slapp.action('user_tasks_list_callback', 'unpick', (msg, task_id) => {
+  bot.unassignTask(task_id);
   // TODO remove attachment from message
   // TODO try to reassign the task
 });
 
-slapp.action('tasks_list_callback', 'pick', (msg, value) => {
-  // the task index is msg.body.attachment_id - 1
-  bot.assignTask(msg.body.user, msg.body.attachment_id - 1);
+slapp.action('tasks_list_callback', 'pick', (msg, task_id) => {
+
+  bot.assignTask(msg.body.user, task_id);
   // list the tasks again to remove the task
   bot.listTasks(msg, true);
 });
