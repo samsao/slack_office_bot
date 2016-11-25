@@ -5,6 +5,7 @@ const Slapp = require('slapp')
 const ConvoStore = require('slapp-convo-beepboop')
 const Context = require('slapp-context-beepboop')
 const Bot = require('./bot.js');
+const Constants = require("./constants");
 
 // Global variables
 var bot = new Bot();
@@ -30,20 +31,20 @@ slapp.message('my tasks', ['direct_message'], (msg) => {
   bot.listUserTasks(msg.meta.user_id);
 });
 
-slapp.action('user_tasks_list_callback', 'done', (msg, task_id) => {
+slapp.action(Constants.UserTaskListCB, 'done', (msg, task_id) => {
 
   bot.completeTask(task_id);
   // TODO remove attachment from message
   // TODO give reward
 });
 
-slapp.action('user_tasks_list_callback', 'unpick', (msg, task_id) => {
+slapp.action(Constants.UserTaskListCB, 'unpick', (msg, task_id) => {
   bot.unassignTask(task_id);
   // TODO remove attachment from message
   // TODO try to reassign the task
 });
 
-slapp.action('tasks_list_callback', 'pick', (msg, task_id) => {
+slapp.action(Constants.TaskListCB, 'pick', (msg, task_id) => {
 
   bot.assignTask(msg.body.user, task_id);
   // list the tasks again to remove the task

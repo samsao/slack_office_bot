@@ -11,7 +11,8 @@ const TaskMessageAction = require('./model/taskMessageAction.js');
 const User = require('./model/user.js');
 const Util = require('./util.js');
 const WebClient = require('@slack/client').WebClient;
-const Scheduler = require('./messageScheduler.js')
+const Scheduler = require('./messageScheduler.js');
+const Constants = require("./constants");
 
 function Bot() {
 	// tasks is a two-dimensional array where the first dimension is the group
@@ -25,6 +26,7 @@ function Bot() {
 
 	//As soon as the bot start it should setup the reminder.
 	this.setupRecurrentTasks();
+
 }
 
 /**
@@ -64,11 +66,11 @@ Bot.prototype.generateTasks = function() {
 Bot.prototype.listTasks = function(msg, replace) {
 	// create the attachments
 	var attachments = this.getTodayTaskAttachments();
-	var msgTitle = 'Here are the tasks for the day:';
+	var msgTitle = Constants.DayTasksTitle;
 	//If not a valid day in the array should be empty tasks
 	if (!attachments) {
 		attachments = [];
-		msgTitle = 'There are no tasks for today! :beers:';
+		msgTitle = Constants.NoTasksTitle;
 	}
 
 	if (replace) {
@@ -92,11 +94,11 @@ Bot.prototype.listTasks = function(msg, replace) {
 Bot.prototype.listTasksOnChannel = function(channel_id) {
 	// create the attachments
 	var attachments = this.getTodayTaskAttachments();
-	var msgTitle = 'Here are the tasks for the day:';
+	var msgTitle = Constants.DayTasksTitle;
 	//If not a valid day in the array should be empty tasks
 	if (!attachments) {
 		attachments = [];
-		msgTitle = 'There are no tasks for today! :beers:';
+		msgTitle = Constants.NoTasksTitle;
 	}
 
 	this.webClient.chat.postMessage(channel_id,
@@ -138,7 +140,7 @@ Bot.prototype.getTasksListMessageAttachments = function(tasks) {
 		var task = tasks[i];
 		if (!task.assignee) {
 			var actions = [new TaskMessageAction('pick', 'Pick', 'button', tasks[i].id)];
-			attachments.push(this.getTaskMessageAttachment(task, 'tasks_list_callback', actions));
+			attachments.push(this.getTaskMessageAttachment(task, Constants.TaskListCB, actions));
 		}
 	}
 	return attachments;
@@ -155,7 +157,7 @@ Bot.prototype.listUserTasks = function(user_id) {
 	var tasks = tasksDictionary[user_id];
 	if (tasks) {
 		this.webClient.chat.postMessage(user_id,
-			'Here are your tasks for today:', {
+			Constants.UserTasksTitle, {
 				attachments: this.getUserTasksListMessageAttachments(tasks),
 				as_user: true
 			},
@@ -166,7 +168,7 @@ Bot.prototype.listUserTasks = function(user_id) {
 			});
 	} else {
 		this.webClient.chat.postMessage(user_id,
-			'You don\'t have any task today! :beer:', {
+			Constants.UserNoTasksTitle, {
 				as_user: true
 			},
 			function(err, res) {
@@ -190,7 +192,7 @@ Bot.prototype.getUserTasksListMessageAttachments = function(tasks) {
 		//I Think we rather create a new array than mutate it every loop, but not sure in js.
 		//change this if wrong or remove comment when validated.
 		var actions = [new TaskMessageAction('unpick', 'Unpick', 'button', tasks[i].id), new TaskMessageAction('done', 'Done', 'button', tasks[i].id)]
-		attachments.push(this.getTaskMessageAttachment(tasks[i], 'user_tasks_list_callback', actions));
+		attachments.push(this.getTaskMessageAttachment(tasks[i], Constants.UserTaskListCB, actions));
 	}
 	return attachments;
 }
@@ -334,16 +336,16 @@ Bot.prototype.setupTaskGeneration = function(remindScheduler) {
  * @param remindScheduler scheduler for task setup.
  */
 Bot.prototype.setupTaskListing = function(remindScheduler) {
-	var self = this;
-	remindScheduler.scheduleCallback([1,2,3,4,5], [8], [30], function() {
-		//FIXME: Hardcoded channel id on officebots for the moment, change when decided the proper one.
-		self.bot.listTasksOnChannel('G3466NZT4');
-	});
-}
-/**
- * Reminds all users of their tasks in private message.
- *
- */
+		var self = this;
+		remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [8], [30], function() {
+			//FIXME: Hardcoded channel id on officebots for the moment, change when decided the proper one.
+			self.bot.listTasksOnChannel('G3466NZT4');
+		});
+	}
+	/**
+	 * Reminds all users of their tasks in private message.
+	 *
+	 */
 Bot.prototype.remindUserTasks = function() {
 	var usersTasks = this.getUsersTasks();
 	for (var user_id in usersTasks) {
