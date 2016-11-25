@@ -63,14 +63,11 @@ Bot.prototype.generateTasks = function() {
  */
 Bot.prototype.listTasks = function(msg, replace) {
 	// create the attachments
-	var currentDay = this.util.currentDay();
-	var attachments = [];
+	var attachments = this.getTodayTaskAttachments();
 	var msgTitle = 'Here are the tasks for the day:';
 	//If not a valid day in the array should be empty tasks
-	var tasksToList = this.tasks[currentDay];
-	if (tasksToList) {
-		attachments = this.getTasksListMessageAttachments(tasksToList);
-	} else {
+	if (!attachments) {
+		attachments = [];
 		msgTitle = 'There are no tasks for today! :beers:';
 	}
 
@@ -88,11 +85,53 @@ Bot.prototype.listTasks = function(msg, replace) {
 }
 
 /**
- * Get the attachments for tasks listing message
+ * Lists the tasks in a specific channel
  *
- * @param tasks tasks to be sent in the message
- * @return formatted attachment to post as message
+ * @param channel_id Id of the channel to list
  */
+Bot.prototype.listTasksOnChannel = function(channel_id) {
+	// create the attachments
+	var attachments = this.getTodayTaskAttachments();
+	var msgTitle = 'Here are the tasks for the day:';
+	//If not a valid day in the array should be empty tasks
+	if (!attachments) {
+		attachments = [];
+		msgTitle = 'There are no tasks for today! :beers:';
+	}
+
+	this.webClient.chat.postMessage(channel_id,
+		msgTitle, {
+			attachments: attachments,
+			as_user: true
+		},
+		function(err, res) {
+			if (err) {
+				console.log('Error:', err);
+			} else {
+				console.log('Message sent: ', res);
+			}
+		});
+
+}
+
+/**
+ * Get list of attachments for today's tasks.
+ */
+Bot.prototype.getTodayTaskAttachments = function() {
+		var currentDay = this.util.currentDay();
+		//If not a valid day in the array should be empty tasks
+		var tasksToList = this.tasks[currentDay];
+		if (tasksToList) {
+			return this.getTasksListMessageAttachments(tasksToList);
+		}
+		return null
+	}
+	/**
+	 * Get the attachments for tasks listing message
+	 *
+	 * @param tasks tasks to be sent in the message
+	 * @return formatted attachment to post as message
+	 */
 Bot.prototype.getTasksListMessageAttachments = function(tasks) {
 	var attachments = [];
 	for (var i in tasks) {
@@ -114,9 +153,6 @@ Bot.prototype.listUserTasks = function(user_id) {
 	// FIXME IMO not very optimal to generate this array when only tasks for one user are required
 	var tasksDictionary = this.getUsersTasks();
 	var tasks = tasksDictionary[user_id];
-	console.log('user taks!')
-	console.log(tasks)
-	console.log(tasksDictionary)
 	if (tasks) {
 		this.webClient.chat.postMessage(user_id,
 			'Here are your tasks for today:', {
@@ -231,10 +267,6 @@ Bot.prototype.completeTask = function(task_id) {
 Bot.prototype.getTask = function(task_id, day) {
 	var tasks = this.tasks[day];
 	for (var i in tasks) {
-		console.log('looping in the tasks!')
-		console.log(tasks[i])
-		console.log(task_id)
-		console.log(tasks[i].id)
 		if (tasks[i].id == task_id) {
 			return tasks[i];
 		}
@@ -269,6 +301,7 @@ Bot.prototype.setupRecurrentTasks = function() {
 	var scheduler = new Scheduler();
 	this.setupTaskReminder(scheduler);
 	this.setupTaskGeneration(scheduler);
+	this.setupTaskListing(scheduler);
 }
 
 /**
@@ -284,17 +317,29 @@ Bot.prototype.setupTaskReminder = function(remindScheduler) {
 }
 
 /**
- * Setup task generation for every monday at 8:30 am
+ * Setup task generation for every monday at 8:29 am
  *
  * @param remindScheduler scheduler for task setup.
  */
 Bot.prototype.setupTaskGeneration = function(remindScheduler) {
 	var self = this;
-	remindScheduler.scheduleCallback([1], [8], [30], function() {
+	remindScheduler.scheduleCallback([1], [8], [29], function() {
 		self.generateTasks();
 	});
 }
 
+/**
+ * Setup system to list tasks on a channel(TBD) for every monday at 8:30 am
+ *
+ * @param remindScheduler scheduler for task setup.
+ */
+Bot.prototype.setupTaskListing = function(remindScheduler) {
+	var self = this;
+	remindScheduler.scheduleCallback([1,2,3,4,5], [8], [30], function() {
+		//FIXME: Hardcoded channel id on officebots for the moment, change when decided the proper one.
+		self.bot.listTasksOnChannel('G3466NZT4');
+	});
+}
 /**
  * Reminds all users of their tasks in private message.
  *
