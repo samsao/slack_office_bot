@@ -148,6 +148,40 @@ Bot.prototype.getTasksListMessageAttachments = function(tasks) {
 }
 
 /**
+ * Lists atask for a given user. Sent in a private message.
+ *
+ * @param task_id id of the task to be displayed
+ * @param user_id id of the user
+ */
+Bot.prototype.displayTaskForUser = function(task_id, user_id) {
+
+	var task = this.getTaskForUser(task_id, user_id);
+	if (task) {
+		//FIXME: Add proper message
+		this.webClient.chat.postMessage(user_id,
+			'You have a new task!', {
+				attachments: this.getUserTasksListMessageAttachments([task]),
+				as_user: true
+			},
+			function(err, res) {
+				if (err) {
+					console.log('Error:', err);
+				}
+			});
+	} else {
+		this.webClient.chat.postMessage(user_id,
+			Constants.UserNoTasksTitle, {
+				as_user: true
+			},
+			function(err, res) {
+				if (err) {
+					console.log('Error:', err);
+				}
+			});
+	}
+}
+
+/**
  * Lists tasks for a given user. Sent in a private message.
  *
  * @param user_id id of the user
@@ -236,8 +270,10 @@ Bot.prototype.getTaskMessageAttachment = function(task, callback_id, taskActions
  * @param task_id id of the task to be assigned
  */
 Bot.prototype.assignTask = function(user, task_id) {
+
 	var task = this.getTask(task_id, this.util.currentDay());
 	task.assignee = new User(user.id, user.name);
+	this.displayTaskForUser(task_id, user.id);
 }
 
 /**
@@ -417,6 +453,25 @@ Bot.prototype.getUserTasks = function(user_id) {
 		});
 	});
 	return userTasks;
+}
+
+/**
+ * return a task with that ID associated to a user
+ *
+ * @param user_id id of the user.
+ * @param task_id id of the task.
+ */
+Bot.prototype.getTaskForUser = function(task_id, user_id) {
+	var task;
+	for (var i in this.tasks) {
+		for(var j in this.tasks[i]) {
+			task = this.tasks[i][j];
+			if (task.id == task_id && task.assignee && task.assignee.id == user_id) {
+				return task;
+			}
+		}
+	}
+	return null;
 }
 
 module.exports = Bot;
