@@ -23,7 +23,8 @@ function Bot() {
 	this.client = new Client();
 	this.client.registerMethod("slackTeams", "https://beepboophq.com/api/v1/slack-teams", "GET");
 	this.initializeWebClient();
-
+	//Calling here so it doesnt have to wait the scheduled task.
+	this.generateTasks();
 	//As soon as the bot start it should setup the reminder.
 	this.setupRecurrentTasks();
 
@@ -52,7 +53,7 @@ Bot.prototype.generateTasks = function() {
 		var id = tasksJSON[i].id;
 		for (var j in days) {
 			var task = new Task(id, title, description, tacos, days[j]);
-			this.tasks[j].push(task);
+			this.tasks[days[j]].push(task);
 		}
 	}
 }
