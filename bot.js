@@ -213,6 +213,28 @@ Bot.prototype.listUserTasks = function(user_id) {
 }
 
 /**
+ * Lists tasks for a given user. Sent in a private message.
+ *
+ * @param user_id id of the user
+ * @param msgTitle title for the message if the user has uncompleted tasks.
+ */
+Bot.prototype.listUserUncompletedTasks = function(user_id, msgTitle) {
+	var tasks = this.getUserUncompletedTasks(user_id);
+	if (tasks) {
+		this.webClient.chat.postMessage(user_id,
+			msgTitle, {
+				attachments: this.getUserTasksListMessageAttachments(tasks),
+				as_user: true
+			},
+			function(err, res) {
+				if (err) {
+					console.log('Error:', err);
+				}
+			});
+	}
+}
+
+/**
  * Creates a list of message attachments based on a array of tasks
  *
  * @param tasks tasks to be sent in the message
@@ -400,7 +422,7 @@ Bot.prototype.setupUncompletedTasksReminder = function(remindScheduler) {
 	var self = this;
 	//FIXME: left 2 separated methods in case we want to call with a different message. validate this, if not merge with one bellow.
 	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [15, 20], [0], function() {
-		self.remindUserTasks();
+		self.remindUserTasks('Have you already completed your tasks?');
 	});
 }
 
@@ -412,7 +434,7 @@ Bot.prototype.setupUncompletedTasksReminder = function(remindScheduler) {
 Bot.prototype.setupTaskReminder = function(remindScheduler) {
 	var self = this;
 	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [21], [0], function() {
-		self.remindUserTasks();
+		self.remindUserTasks('Forgetting something? Here were your tasks today:');
 	});
 }
 
@@ -443,11 +465,12 @@ Bot.prototype.setupTaskListing = function(remindScheduler) {
 	/**
 	 * Reminds all users of their tasks in private message.
 	 *
+ * @param title title for the message if the user has uncompleted tasks.
 	 */
-Bot.prototype.remindUserTasks = function() {
+Bot.prototype.remindUserTasks = function(msgTitle) {
 	var usersTasks = this.getUsersUncompletedTasks();
 	for (var user_id in usersTasks) {
-		this.listUserTasks(user_id);
+		this.listUserUncompletedTasks(user_id, msgTitle);
 	}
 }
 
