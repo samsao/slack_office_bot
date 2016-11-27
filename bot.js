@@ -118,6 +118,32 @@ Bot.prototype.listTasksOnChannel = function(channel_id) {
 }
 
 /**
+ * Lists still unasigned tasks in a specific channel
+ *
+ * @param channel_id Id of the channel to list
+ * @param msgTitle Title for the message listing
+ */
+Bot.prototype.listUnassignedTasksOnChannel = function(channel_id) {
+	// create the attachments
+	var attachments = this.getTodayTaskAttachments();
+	//If not a valid day in the array should be empty tasks
+	if (attachments && attachments.length > 0) {
+		this.webClient.chat.postMessage(channel_id,
+			'Some tasks are still unassigned for today:', {
+				attachments: attachments,
+				as_user: true
+			},
+			function(err, res) {
+				if (err) {
+					console.log('Error:', err);
+				} else {
+					console.log('Message sent: ', res);
+				}
+			});
+	}
+}
+
+/**
  * Get list of attachments for today's tasks.
  */
 Bot.prototype.getTodayTaskAttachments = function() {
@@ -470,6 +496,19 @@ Bot.prototype.setupRecurrentTasks = function() {
 	this.setupTaskGeneration(scheduler);
 	this.setupTaskListing(scheduler);
 	this.setupUncompletedTasksReminder(scheduler);
+	this.setupUnassignedTaskReminder(scheduler);
+}
+
+/**
+ * Setup a listing of remaining unassigned tasks every day at 11 am and 2pm 
+ *
+ * @param remindScheduler scheduler for task setup.
+ */
+Bot.prototype.setupUnassignedTaskReminder = function(remindScheduler) {
+	var self = this;
+	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [11, 14], [0], function() {
+		self.listUnassignedTasksOnChannel(Constants.OfficeBotChannelID);
+	});
 }
 
 /**

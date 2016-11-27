@@ -19,6 +19,10 @@ function Util() {
 Util.prototype.currentDay = function() {
 	var date = new Date();
 	var day = date.getDay() - 1; //0 for us is monday
+	//this will return sunday as 6 instead of -1
+	if (day == -1) {
+		return 6;
+	}
 	return day
 }
 module.exports = Util;
