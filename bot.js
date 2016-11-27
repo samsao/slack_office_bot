@@ -140,19 +140,28 @@ Bot.prototype.getTasksListMessageAttachments = function(tasks) {
 	for (var i in tasks) {
 		var task = tasks[i];
 		if (!task.assignee) {
-			var actions = [new TaskMessageAction('pick', 'Pick', 'button', tasks[i].id)];
-			attachments.push(this.getTaskMessageAttachment(task, Constants.TaskListCB, actions));
+			attachments.push(this.getTaskPickAttachment(task));
 		}
 	}
 	return attachments;
 }
 
 /**
- * display a task for a given user. Sent in a private message.
+ * Get the attachments for tasks listing message
  *
- * @param task_id id of the task to be displayed
- * @param user_id id of the user
+ * @param tasks tasks to be sent in the message
+ * @return formatted attachment to post as message
  */
+Bot.prototype.getTaskPickAttachment = function(task) {
+		var actions = [new TaskMessageAction('pick', 'Pick', 'button', task.id)];
+		return this.getTaskMessageAttachment(task, Constants.TaskListCB, actions);
+	}
+	/**
+	 * display a task for a given user. Sent in a private message.
+	 *
+	 * @param task_id id of the task to be displayed
+	 * @param user_id id of the user
+	 */
 Bot.prototype.displayTaskForUser = function(task_id, user_id) {
 
 	var task = this.getTaskForUser(task_id, user_id);
@@ -326,6 +335,29 @@ Bot.prototype.unassignTask = function(msg, task_id) {
 }
 
 /**
+ * Message channel user unpicked task and post a new task message.
+ *
+ * @param user user who unpicked the task
+ * @param task_id id of task to unassign
+ */
+Bot.prototype.userUnpickedTask = function(user, task_id) {
+	var task = this.getTask(task_id, this.util.currentDay());
+	let attachment = this.getTaskPickAttachment(task);
+	//FIXME: add proper message & channel
+	this.webClient.chat.postMessage('G3466NZT4',
+		'@' + user.name + ' could not finish his task. Someone please do his/her job:', {
+			attachments: [attachment],
+			as_user: true
+		},
+		function(err, res) {
+			if (err) {
+				console.log('Error:', err);
+			}
+		});
+
+}
+
+/**
  * Complete a task
  *
  * @param msg Slack message
@@ -334,7 +366,7 @@ Bot.prototype.unassignTask = function(msg, task_id) {
 Bot.prototype.completeTask = function(msg, task_id) {
 	var task = this.getTask(task_id, this.util.currentDay());
 	task.done = true;
-	
+	//FIXME: Add proper message.
 	var field = {
 		title: "",
 		value: "You completed a task! :presidio:",
@@ -465,7 +497,7 @@ Bot.prototype.setupTaskListing = function(remindScheduler) {
 	/**
 	 * Reminds all users of their tasks in private message.
 	 *
- * @param title title for the message if the user has uncompleted tasks.
+	 * @param title title for the message if the user has uncompleted tasks.
 	 */
 Bot.prototype.remindUserTasks = function(msgTitle) {
 	var usersTasks = this.getUsersUncompletedTasks();
