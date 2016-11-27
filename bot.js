@@ -378,10 +378,10 @@ Bot.prototype.completeTask = function(msg, task_id) {
 
 	}
 	/**
-	 * Complete a task
+	 * give tacos to an user for a completed task
 	 *
-	 * @param msg Slack message
-	 * @param task_id id of the completed task
+	 * @param user user to receive the tacos
+	 * @param task completed task
 	 */
 Bot.prototype.giveTacosForTask = function(user, task) {
 
