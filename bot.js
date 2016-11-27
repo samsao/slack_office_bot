@@ -70,7 +70,7 @@ Bot.prototype.listTasks = function(msg, replace) {
 	var attachments = this.getTodayTaskAttachments();
 	var msgTitle = Constants.DayTasksTitle;
 	//If not a valid day in the array should be empty tasks
-	if (!attachments) {
+	if (!attachments || attachments.length == 0) {
 		attachments = [];
 		msgTitle = Constants.NoTasksTitle;
 	}
