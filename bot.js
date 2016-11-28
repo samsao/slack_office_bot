@@ -14,6 +14,7 @@ const Util = require('./util.js');
 const WebClient = require('@slack/client').WebClient;
 const Scheduler = require('./messageScheduler.js');
 const Constants = require("./constants");
+const HelpCommands = require("./helpCommands");
 
 function Bot() {
 	// tasks is a two-dimensional array where the first dimension is the group
@@ -35,36 +36,57 @@ function Bot() {
  * Reads the tasks.json file and create the tasks.
  */
 Bot.prototype.generateTasks = function() {
-	// empty the tasks first
-	this.tasks = new Array(5);
+		// empty the tasks first
+		this.tasks = new Array(7);
 
-	// read the JSON file
-	var tasksJSON = JSON.parse(Fs.readFileSync('model/tasks.json', 'utf8')).tasks;
+		// read the JSON file
+		var tasksJSON = JSON.parse(Fs.readFileSync('model/tasks.json', 'utf8')).tasks;
 
-	//Create new array to hold tasks
-	for (var i = 0; i < 5; i++) {
-		this.tasks[i] = [];
-	}
-	//insert tasks in the array
-	for (var i in tasksJSON) {
-		var title = tasksJSON[i].title;
-		var description = tasksJSON[i].description;
-		var tacos = tasksJSON[i].tacos;
-		var days = tasksJSON[i].days;
-		var id = tasksJSON[i].id;
-		for (var j in days) {
-			var task = new Task(id, title, description, tacos, days[j]);
-			this.tasks[days[j]].push(task);
+		//Create new array to hold tasks
+		for (var i = 0; i < 7; i++) {
+			this.tasks[i] = [];
+		}
+		//insert tasks in the array
+		for (var i in tasksJSON) {
+			var title = tasksJSON[i].title;
+			var description = tasksJSON[i].description;
+			var tacos = tasksJSON[i].tacos;
+			var days = tasksJSON[i].days;
+			var id = tasksJSON[i].id;
+			for (var j in days) {
+				var task = new Task(id, title, description, tacos, days[j]);
+				this.tasks[days[j]].push(task);
+			}
 		}
 	}
-}
+	/**
+	 * Lists the help commands for the bot
+	 *
+	 * @param msg Slack message
+	 */
+Bot.prototype.listHelp = function(msg) {
+		var help = new HelpCommands();
+		var attachments = [];
+		for (var command in help.commands) {
+			attachments.push({
+				title: command,
+				text: help.commands[command],
+				attachment_type: "default",
+				"mrkdwn_in": ["text"]
+			});
+		}
 
-/**
- * Lists the tasks in the channel
- *
- * @param msg Slack message
- * @param replace boolean to know if the message should be replaced or not
- */
+		msg.say({
+			text: 'Here are some ways I can help you:',
+			attachments: attachments,
+		});
+	}
+	/**
+	 * Lists the tasks in the channel
+	 *
+	 * @param msg Slack message
+	 * @param replace boolean to know if the message should be replaced or not
+	 */
 Bot.prototype.listTasks = function(msg, replace) {
 	// create the attachments
 	var attachments = this.getTodayTaskAttachments();
