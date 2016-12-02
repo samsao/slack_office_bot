@@ -148,7 +148,7 @@ Bot.prototype.getTasksListMessageAttachments = function(tasks) {
 }
 
 /**
- * Lists atask for a given user. Sent in a private message.
+ * display a task for a given user. Sent in a private message.
  *
  * @param task_id id of the task to be displayed
  * @param user_id id of the user
@@ -187,9 +187,7 @@ Bot.prototype.displayTaskForUser = function(task_id, user_id) {
  * @param user_id id of the user
  */
 Bot.prototype.listUserTasks = function(user_id) {
-	// FIXME IMO not very optimal to generate this array when only tasks for one user are required
-	var tasksDictionary = this.getUsersTasks();
-	var tasks = tasksDictionary[user_id];
+	var tasks = this.getUserUncompletedTasks(user_id);
 	if (tasks) {
 		this.webClient.chat.postMessage(user_id,
 			Constants.UserTasksTitle, {
@@ -204,6 +202,28 @@ Bot.prototype.listUserTasks = function(user_id) {
 	} else {
 		this.webClient.chat.postMessage(user_id,
 			Constants.UserNoTasksTitle, {
+				as_user: true
+			},
+			function(err, res) {
+				if (err) {
+					console.log('Error:', err);
+				}
+			});
+	}
+}
+
+/**
+ * Lists tasks for a given user. Sent in a private message.
+ *
+ * @param user_id id of the user
+ * @param msgTitle title for the message if the user has uncompleted tasks.
+ */
+Bot.prototype.listUserUncompletedTasks = function(user_id, msgTitle) {
+	var tasks = this.getUserUncompletedTasks(user_id);
+	if (tasks) {
+		this.webClient.chat.postMessage(user_id,
+			msgTitle, {
+				attachments: this.getUserTasksListMessageAttachments(tasks),
 				as_user: true
 			},
 			function(err, res) {
@@ -390,6 +410,20 @@ Bot.prototype.setupRecurrentTasks = function() {
 	this.setupTaskReminder(scheduler);
 	this.setupTaskGeneration(scheduler);
 	this.setupTaskListing(scheduler);
+	this.setupUncompletedTasksReminder(scheduler);
+}
+
+/**
+ * Setup a listing of user's uncompleted tasks every day at 3pm and 8pm 
+ *
+ * @param remindScheduler scheduler for task setup.
+ */
+Bot.prototype.setupUncompletedTasksReminder = function(remindScheduler) {
+	var self = this;
+	//FIXME: left 2 separated methods in case we want to call with a different message. validate this, if not merge with one bellow.
+	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [15, 20], [0], function() {
+		self.remindUserTasks('Have you already completed your tasks?');
+	});
 }
 
 /**
@@ -400,7 +434,7 @@ Bot.prototype.setupRecurrentTasks = function() {
 Bot.prototype.setupTaskReminder = function(remindScheduler) {
 	var self = this;
 	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [21], [0], function() {
-		self.remindUserTasks();
+		self.remindUserTasks('Forgetting something? Here were your tasks today:');
 	});
 }
 
@@ -431,13 +465,12 @@ Bot.prototype.setupTaskListing = function(remindScheduler) {
 	/**
 	 * Reminds all users of their tasks in private message.
 	 *
+ * @param title title for the message if the user has uncompleted tasks.
 	 */
-Bot.prototype.remindUserTasks = function() {
-	var usersTasks = this.getUsersTasks();
+Bot.prototype.remindUserTasks = function(msgTitle) {
+	var usersTasks = this.getUsersUncompletedTasks();
 	for (var user_id in usersTasks) {
-		// FIXME
-		// var formatedTasks = this.listUserTasksPM([usersTasks[user_id]], user_id);
-		// this.listUserTasksPM(formatedTasks, user_id);
+		this.listUserUncompletedTasks(user_id, msgTitle);
 	}
 }
 
@@ -461,14 +494,33 @@ Bot.prototype.getUsersTasks = function() {
 }
 
 /**
+ * Returns a dictionnary of tasks where keys are user_id
+ *
+ */
+Bot.prototype.getUsersUncompletedTasks = function() {
+	var userTaskDictionary = {};
+	this.tasks.forEach(function(taskGroup) {
+		taskGroup.forEach(function(task) {
+			if (task.assignee && !task.done) {
+				if (!userTaskDictionary[task.assignee.id]) {
+					userTaskDictionary[task.assignee.id] = [];
+				}
+				userTaskDictionary[task.assignee.id].push(task);
+			}
+		});
+	});
+	return userTaskDictionary;
+}
+
+/**
  * Returns a list of tasks assigned to a user_id
  *
  */
-Bot.prototype.getUserTasks = function(user_id) {
+Bot.prototype.getUserUncompletedTasks = function(user_id) {
 	var userTasks = [];
 	this.tasks.forEach(function(taskGroup) {
 		taskGroup.forEach(function(task) {
-			if (task.assignee && task.assignee.id == user_id) {
+			if (!task.done && task.assignee && task.assignee.id == user_id) {
 				userTasks.push(task);
 			}
 		});
@@ -485,7 +537,7 @@ Bot.prototype.getUserTasks = function(user_id) {
 Bot.prototype.getTaskForUser = function(task_id, user_id) {
 	var task;
 	for (var i in this.tasks) {
-		for(var j in this.tasks[i]) {
+		for (var j in this.tasks[i]) {
 			task = this.tasks[i][j];
 			if (task.id == task_id && task.assignee && task.assignee.id == user_id) {
 				return task;
