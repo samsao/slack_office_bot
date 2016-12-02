@@ -7,6 +7,7 @@
 const Fs = require('fs');
 const Client = require('node-rest-client').Client;
 const Task = require('./model/task.js');
+const TaskStatistics = require('./model/taskStatistics.js');
 const TaskMessageAction = require('./model/taskMessageAction.js');
 const User = require('./model/user.js');
 const Util = require('./util.js');
@@ -69,7 +70,7 @@ Bot.prototype.listTasks = function(msg, replace) {
 	var attachments = this.getTodayTaskAttachments();
 	var msgTitle = Constants.DayTasksTitle;
 	//If not a valid day in the array should be empty tasks
-	if (!attachments) {
+	if (!attachments || attachments.length == 0) {
 		attachments = [];
 		msgTitle = Constants.NoTasksTitle;
 	}
@@ -360,6 +361,7 @@ Bot.prototype.unassignTask = function(msg, task_id) {
 
 }
 
+
 /**
  * Message channel user unpicked task and post a new task message.
  *
@@ -467,6 +469,72 @@ Bot.prototype.getTask = function(task_id, day) {
 	return null;
 }
 
+
+/**
+ * report status of the tasks now.
+ *
+ * @param day day for the status report.
+ */
+Bot.prototype.reportTaskStatus = function(day) {
+	var taskStatistics = new TaskStatistics(this.tasks[day]);
+	var attachments = [];
+
+	//FIXME: Add proper messages!
+	attachments.push({
+		title: 'completed tasks:',
+		text: taskStatistics.completePercentage() + '% of the tasks were completed',
+		fields: [],
+		callback_id: '',
+		attachment_type: "default",
+		actions: []
+	});
+	attachments.push({
+		title: 'uncompleted tasks:',
+		text: taskStatistics.uncompletePercentage() + '% of the tasks were not completed',
+		fields: [],
+		callback_id: '',
+		attachment_type: "default",
+		actions: []
+	});
+
+	if (taskStatistics.unassignedTasks > 0) {
+		attachments.push({
+			title: 'unassigned tasks:',
+			text: taskStatistics.unassignedTasks + ' task(s) were not assigned',
+			fields: [],
+			callback_id: '',
+			attachment_type: "default",
+			actions: []
+		});
+	}
+
+	if (taskStatistics.uncompleteTasks > 0) {
+		var usersString = ''
+		taskStatistics.uncompleteUsers.forEach(function(user) {
+			usersString = usersString + '<@' + user.id + '|' + user.name + '> ';
+		});
+		attachments.push({
+			title: 'This users did not complete their tasks:',
+			text: usersString,
+			fields: [],
+			callback_id: '',
+			attachment_type: "default",
+			actions: []
+		});
+	}
+
+	this.webClient.chat.postMessage(Constants.OfficeBotChannelID,
+		'Here is the task status for ' + this.util.dayNames[day] + ':', {
+			attachments: attachments,
+			as_user: true
+		},
+		function(err, res) {
+			if (err) {
+				console.log('Error:', err);
+			}
+		});
+}
+
 /**
  * Initialize Slack Web API client.
  * It gets the Access Token from BeepBoop.
@@ -497,6 +565,25 @@ Bot.prototype.setupRecurrentTasks = function() {
 	this.setupTaskListing(scheduler);
 	this.setupUncompletedTasksReminder(scheduler);
 	this.setupUnassignedTaskReminder(scheduler);
+	this.setupStatusReport(scheduler);
+}
+
+/**
+ * Setup status report of previous day tasks at 8:30 am 
+ *
+ * @param remindScheduler scheduler for task setup.
+ */
+Bot.prototype.setupStatusReport = function(remindScheduler) {
+	var self = this;
+	remindScheduler.scheduleCallback([2, 3, 4, 5], [8], [30], function() {
+		self.reportTaskStatus(this.util.previousDay());
+	})
+
+	//Listing earlier on monday to avoid the tasks getting wiped out by the task generation.
+	//Since it's all in memory the array will get deleted and the status would be 0
+	remindScheduler.scheduleCallback([1], [8], [28], function() {
+		self.reportTaskStatus(this.util.previousDay());
+	});;
 }
 
 /**
@@ -535,6 +622,7 @@ Bot.prototype.setupTaskReminder = function(remindScheduler) {
 		self.remindUserTasks('Forgetting something? Here were your tasks today:');
 	});
 }
+
 
 /**
  * Setup task generation for every monday at 8:29 am
