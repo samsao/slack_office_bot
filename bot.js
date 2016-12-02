@@ -343,9 +343,9 @@ Bot.prototype.unassignTask = function(msg, task_id) {
 Bot.prototype.userUnpickedTask = function(user, task_id) {
 	var task = this.getTask(task_id, this.util.currentDay());
 	let attachment = this.getTaskPickAttachment(task);
-	//FIXME: add proper message & channel
-	this.webClient.chat.postMessage('G3466NZT4',
-		'@' + user.name + ' could not finish his task. Someone please do his/her job:', {
+	//FIXME: add proper message
+	this.webClient.chat.postMessage(Constants.OfficeBotChannelID,
+		'<@' + user.id + '|' + user.name + '> could not finish his task. Someone please do his/her job:', {
 			attachments: [attachment],
 			as_user: true
 		},
@@ -364,16 +364,43 @@ Bot.prototype.userUnpickedTask = function(user, task_id) {
  * @param task_id id of the completed task
  */
 Bot.prototype.completeTask = function(msg, task_id) {
-	var task = this.getTask(task_id, this.util.currentDay());
-	task.done = true;
-	//FIXME: Add proper message.
-	var field = {
-		title: "",
-		value: "You completed a task! :presidio:",
-		short: false
-	}
+		var task = this.getTask(task_id, this.util.currentDay());
+		task.done = true;
+		//FIXME: Add proper message.
+		var field = {
+			title: "",
+			value: "You completed a task! :presidio:",
+			short: false
+		}
 
-	this.taskMessageUpdate(msg, field);
+		this.taskMessageUpdate(msg, field);
+		this.giveTacosForTask(msg.body.user, task);
+
+	}
+	/**
+	 * give tacos to an user for a completed task
+	 *
+	 * @param user user to receive the tacos
+	 * @param task completed task
+	 */
+Bot.prototype.giveTacosForTask = function(user, task) {
+
+	var tacosString = '';
+	for (var i = 0; i < task.tacos; i++) {
+		tacosString = tacosString + ':taco:';
+	}
+	var message = '<@' + user.id + '|' + user.name + '> ' + tacosString;
+	//Hey taco user ID.
+	this.webClient.chat.postMessage(Constants.HeyTacoUID,
+		message, {
+			attachments: [],
+			as_user: true
+		},
+		function(err, res) {
+			if (err) {
+				console.log('Error:', err);
+			}
+		});
 
 }
 
@@ -490,8 +517,7 @@ Bot.prototype.setupTaskGeneration = function(remindScheduler) {
 Bot.prototype.setupTaskListing = function(remindScheduler) {
 		var self = this;
 		remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [8], [30], function() {
-			//FIXME: Hardcoded channel id on officebots for the moment, change when decided the proper one.
-			self.bot.listTasksOnChannel('G3466NZT4');
+			self.bot.listTasksOnChannel(Constants.OfficeBotChannelID);
 		});
 	}
 	/**
