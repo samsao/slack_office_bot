@@ -33,13 +33,13 @@ slapp.message('my tasks', ['direct_message'], (msg) => {
 
 slapp.action(Constants.UserTaskListCB, 'done', (msg, task_id) => {
 
-  bot.completeTask(task_id);
+  bot.completeTask(msg, task_id);
   // TODO remove attachment from message
   // TODO give reward
 });
 
 slapp.action(Constants.UserTaskListCB, 'unpick', (msg, task_id) => {
-  bot.unassignTask(msg,task_id);
+  bot.unassignTask(msg, task_id);
   // TODO remove attachment from message
   // TODO try to reassign the task
 });

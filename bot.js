@@ -294,33 +294,54 @@ Bot.prototype.unassignUserFromTask = function(task_id) {
  */
 Bot.prototype.unassignTask = function(msg, task_id) {
 
-	var attachments = msg.body.original_message.attachments;
+	this.unassignUserFromTask(task_id);
 	//FIXME: Add proper message.
 	var field = {
 		title: "",
 		value: "You unpicked the task. You\'re really a :hankey:",
 		short: false
 	}
-	var attachmentIndex = msg.body.attachment_id - 1;
-	attachments[attachmentIndex].actions = [];
-	attachments[attachmentIndex].fields.push(field);
-
-	this.unassignUserFromTask(task_id);
-	msg.respond({
-		text: msg.body.original_message.text,
-		attachments: attachments,
-	});
+	this.taskMessageUpdate(msg, field);
 
 }
 
 /**
  * Complete a task
  *
+ * @param msg Slack message
  * @param task_id id of the completed task
  */
-Bot.prototype.completeTask = function(task_id) {
+Bot.prototype.completeTask = function(msg, task_id) {
 	var task = this.getTask(task_id, this.util.currentDay());
 	task.done = true;
+	
+	var field = {
+		title: "",
+		value: "You completed a task! :presidio:",
+		short: false
+	}
+
+	this.taskMessageUpdate(msg, field);
+
+}
+
+/**
+ * Complete a task
+ *
+ * @param msg Slack message
+ * @param field field to be added to the message. this should represent the update on the message
+ */
+Bot.prototype.taskMessageUpdate = function(msg, field) {
+
+	var attachments = msg.body.original_message.attachments;
+	var attachmentIndex = msg.body.attachment_id - 1;
+	attachments[attachmentIndex].actions = [];
+	attachments[attachmentIndex].fields.push(field);
+
+	msg.respond({
+		text: msg.body.original_message.text,
+		attachments: attachments,
+	});
 }
 
 
