@@ -16,3 +16,8 @@ define("TaskListCB", 'tasks_list_callback');
 define("HeyTacoUID", 'U2SGHBTRD');
 //FIXME: Hardcoded officebots channel for the moment. change to proper one when decided.
 define("OfficeBotChannelID", 'G3466NZT4');
+
+//Commands:
+define("ListTasks", 'tasks');
+define("ListMyTasks", 'my tasks');
+define("Help", 'help');

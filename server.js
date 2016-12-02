@@ -23,11 +23,15 @@ var slapp = Slapp({
 //*********************************************
 
 // FIXME temporary to test tasks generation
-slapp.message('tasks', ['mention'], (msg) => {
+slapp.message(Constants.ListTasks, ['mention'], (msg) => {
   bot.listTasks(msg, false);
 });
 
-slapp.message('my tasks', ['direct_message'], (msg) => {
+slapp.message(Constants.Help, ['mention','direct_message'], (msg) => {
+  bot.listHelp(msg);
+});
+
+slapp.message(Constants.ListMyTasks, ['direct_message'], (msg) => {
   bot.listUserTasks(msg.meta.user_id);
 });
 
