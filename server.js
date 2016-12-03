@@ -5,7 +5,7 @@ const Slapp = require('slapp')
 const ConvoStore = require('slapp-convo-beepboop')
 const Context = require('slapp-context-beepboop')
 const Bot = require('./bot.js');
-const Constants = require("./constants");
+const Constants = require('./constants');
 
 // Global variables
 var bot = new Bot();
@@ -23,34 +23,34 @@ var slapp = Slapp({
 //*********************************************
 
 // FIXME temporary to test tasks generation
-slapp.message(Constants.ListTasks, ['mention'], (msg) => {
+slapp.message(Constants.ListTasksCommand, ['mention'], (msg) => {
   bot.listTasks(msg, false);
 });
 
-slapp.message(Constants.Help, ['mention','direct_message'], (msg) => {
-  bot.listHelp(msg);
+slapp.message('stats', ['direct_message'], (msg) => {
+  bot.listTasks(msg, false);
 });
 
-slapp.message(Constants.ListMyTasks, ['direct_message'], (msg) => {
-  bot.listUserTasks(msg.meta.user_id);
-});
-
-slapp.action(Constants.UserTaskListCB, 'done', (msg, task_id) => {
-
+slapp.action(Constants.UserTaskListCallBack, Constants.ActionNameDone, (msg, task_id) => {
   bot.completeTask(msg, task_id);
-  // TODO give reward
 });
 
-slapp.action(Constants.UserTaskListCB, 'unpick', (msg, task_id) => {
+slapp.action(Constants.UserTaskListCallBack, Constants.ActionNameUnpick, (msg, task_id) => {
   bot.unassignTask(msg, task_id);
-  bot.userUnpickedTask(msg.body.user, task_id);
 });
 
-slapp.action(Constants.TaskListCB, 'pick', (msg, task_id) => {
-
+slapp.action(Constants.TaskListCallBack, Constants.ActionNamePick, (msg, task_id) => {
   bot.assignTask(msg.body.user, task_id);
   // list the tasks again to remove the task
   bot.listTasks(msg, true);
+});
+
+slapp.action(Constants.TaskReassignCallback, Constants.ActionNamePick, (msg, task_id) => {
+  bot.assignTask(msg.body.user, task_id);
+  // delete the message
+  msg.respond(msg.body.response_url, {
+    delete_original: true
+  });
 });
 
 // attach Slapp to express server

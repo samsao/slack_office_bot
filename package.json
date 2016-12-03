@@ -25,6 +25,7 @@
     "slapp": "^1.2.0",
     "slapp-context-beepboop": "^1.1.0",
     "slapp-convo-beepboop": "^1.0.0",
-    "standard": "^8.4.0"
+    "standard": "^8.4.0",
+    "string-format": "^0.5.0"
   }
 }
