@@ -23,13 +23,9 @@ var slapp = Slapp({
 //*********************************************
 
 // FIXME temporary to test tasks generation
-slapp.message(Constants.ListTasksCommand, ['mention'], (msg) => {
-  bot.listTasks(msg, false);
-});
-
-slapp.message('stats', ['direct_message'], (msg) => {
-  bot.listTasks(msg, false);
-});
+// slapp.message(Constants.ListTasksCommand, ['mention'], (msg) => {
+//   bot.listTasksOnChannel(false);
+// });
 
 slapp.action(Constants.UserTaskListCallBack, Constants.ActionNameDone, (msg, task_id) => {
   bot.completeTask(msg, task_id);
@@ -42,15 +38,13 @@ slapp.action(Constants.UserTaskListCallBack, Constants.ActionNameUnpick, (msg, t
 slapp.action(Constants.TaskListCallBack, Constants.ActionNamePick, (msg, task_id) => {
   bot.assignTask(msg.body.user, task_id);
   // list the tasks again to remove the task
-  bot.listTasks(msg, true);
+  bot.listTasksOnChannel(true);
 });
 
 slapp.action(Constants.TaskReassignCallback, Constants.ActionNamePick, (msg, task_id) => {
   bot.assignTask(msg.body.user, task_id);
   // delete the message
-  msg.respond(msg.body.response_url, {
-    delete_original: true
-  });
+  bot.deleteMessage(msg.body.message_ts, msg.body.channel.id);
 });
 
 // attach Slapp to express server

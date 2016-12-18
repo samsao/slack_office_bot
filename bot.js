@@ -57,60 +57,108 @@ Bot.prototype.generateTasks = function() {
 }
 
 /**
- * Lists the tasks in the channel
- * FIXME to be removed
+ * Lists the tasks in a specific channel
  *
- * @param msg Slack message
  * @param replace boolean to know if the message should be replaced or not
  */
-Bot.prototype.listTasks = function(msg, replace) {
+Bot.prototype.listTasksOnChannel = function(replace) {
 	// create the attachments
 	var attachments = this.getTodayTaskAttachments();
-	var msgTitle = Constants.DayTasksTitle;
+	var msg = Constants.DayTasksTitle;
 	//If not a valid day in the array should be empty tasks
 	if (!attachments || attachments.length == 0) {
 		attachments = [];
-		msgTitle = Constants.NoTasksTitle;
+		msg = Constants.NoTasksTitle;
 	}
 
-	if (replace) {
-		msg.respond({
-			text: msgTitle,
-			attachments: attachments,
+	var self = this;
+	if (!replace) {
+		this.sendMessage(Constants.OfficeBotChannelID, msg, {
+			attachments: attachments
+		}, function(err, res) {
+			if (err) {
+				console.log('Error:', err);
+			} else {
+				self.tasksMsgTs = res.ts;
+				console.log(self.tasksMsgTs);
+			}
 		});
 	} else {
-		msg.say({
-			text: msgTitle,
-			attachments: attachments,
+		this.updateMessage(self.tasksMsgTs, Constants.OfficeBotChannelID, msg, {
+			attachments: attachments
 		});
 	}
 }
 
 /**
- * Lists the tasks in a specific channel
- *
- * @param channel_id Id of the channel to list
+ * Delete a message
+ * @param ts - Timestamp of the message to be deleted.
+ * @param channel - Channel containing the message to be deleted.
  */
-Bot.prototype.listTasksOnChannel = function(channel_id) {
-	// create the attachments
-	var attachments = this.getTodayTaskAttachments();
-	var msgTitle = Constants.DayTasksTitle;
-	//If not a valid day in the array should be empty tasks
-	if (!attachments) {
-		attachments = [];
-		msgTitle = Constants.NoTasksTitle;
-	}
-
-	this.webClient.chat.postMessage(channel_id,
-		msgTitle, {
-			attachments: attachments,
-			as_user: true
-		},
+Bot.prototype.deleteMessage = function(ts, channel) {
+	this.webClient.chat.delete(ts, channel, null,
 		function(err, res) {
 			if (err) {
 				console.log('Error:', err);
 			}
 		});
+}
+
+/**
+ * Send a message to a channel or a user
+ *
+ * @param channel Channel, private group, or IM channel to send message to
+ * @param msg Text of the message to send
+ * @param message options
+ * @param callback Optional callback method
+ */
+Bot.prototype.sendMessage = function(channel, msg, opts, callback) {
+	if (!callback) {
+		callback = function(err, res) {
+			if (err) {
+				console.log('Error:', err);
+			}
+		};
+	}
+
+	if (opts) {
+		opts.as_user = true;
+	} else {
+		opts = {
+			as_user: true
+		};
+	}
+
+	this.webClient.chat.postMessage(channel, msg, opts, callback);
+}
+
+/**
+ * Updates a message
+ *
+ * @param ts Timestamp of the message to update
+ * @param channel Channel, private group, or IM channel to send message to
+ * @param msg Text of the message to send
+ * @param message options
+ * @param callback Optional callback method
+ */
+Bot.prototype.updateMessage = function(ts, channel, msg, opts, callback) {
+	if (!callback) {
+		callback = function(err, res) {
+			if (err) {
+				console.log('Error:', err);
+			}
+		};
+	}
+
+	if (opts) {
+		opts.as_user = true;
+	} else {
+		opts = {
+			as_user: true
+		};
+	}
+	
+	this.webClient.chat.update(ts, channel, msg, opts, callback);
 }
 
 /**
@@ -123,7 +171,7 @@ Bot.prototype.getTodayTaskAttachments = function() {
 	if (tasksToList) {
 		return this.getTasksListMessageAttachments(tasksToList);
 	}
-	return null
+	return null;
 }
 
 /**
@@ -163,27 +211,12 @@ Bot.prototype.getTaskPickAttachment = function(task) {
 Bot.prototype.displayTaskForUser = function(task_id, user_id) {
 	var task = this.getTaskForUser(task_id, user_id);
 	if (task) {
-		this.webClient.chat.postMessage(user_id,
+		this.sendMessage(user_id,
 			Constants.NewTaskForUserTitle, {
-				attachments: this.getUserTasksListMessageAttachments([task]),
-				as_user: true
-			},
-			function(err, res) {
-				if (err) {
-					console.log('Error:', err);
-				}
+				attachments: this.getUserTasksListMessageAttachments([task])
 			});
 	} else {
-		//FIXME: Can this ever happen?
-		this.webClient.chat.postMessage(user_id,
-			Constants.UserNoTasksTitle, {
-				as_user: true
-			},
-			function(err, res) {
-				if (err) {
-					console.log('Error:', err);
-				}
-			});
+		this.sendMessage(user_id, Constants.UserNoTasksTitle);
 	}
 }
 
@@ -254,15 +287,23 @@ Bot.prototype.assignTask = function(user, task_id) {
  */
 Bot.prototype.unassignTask = function(msg, task_id) {
 	var task = this.getTask(task_id, this.util.currentDay());
-	task.assignee = null;
-
-	var field = {
-		title: '',
-		value: StringFormat(Constants.UserUnpickedTaskPrivateMessage, Constants.BotName),
-		short: false
+	if (task.day == this.util.currentDay()) {
+		task.assignee = null;
+		var field = {
+			title: '',
+			value: StringFormat(Constants.UserUnpickedTaskPrivateMessage, Constants.BotName),
+			short: false
+		}
+		this.taskMessageUpdate(msg, field);
+		this.userUnpickedTask(msg.body.user, task_id);
+	} else {
+		var field = {
+			title: '',
+			value: Constants.UserCompletedTaskTooLateMessage,
+			short: false
+		}
+		this.taskMessageUpdate(msg, field);
 	}
-	this.taskMessageUpdate(msg, field);
-	this.userUnpickedTask(msg.body.user, task_id);
 }
 
 /**
@@ -276,15 +317,9 @@ Bot.prototype.userUnpickedTask = function(user, task_id) {
 	var actions = [new TaskMessageAction(Constants.ActionNamePick, 'Pick', 'button', task.id)];
 	var attachments = this.getTaskMessageAttachment(task, Constants.TaskReassignCallback, actions);
 
-	this.webClient.chat.postMessage(Constants.OfficeBotChannelID,
+	this.sendMessage(Constants.OfficeBotChannelID,
 		StringFormat(Constants.UserUnpickedTaskPublicMessage, '<@' + user.id + '|' + user.name + '>'), {
-			attachments: [attachments],
-			as_user: true
-		},
-		function(err, res) {
-			if (err) {
-				console.log('Error:', err);
-			}
+			attachments: [attachments]
 		});
 }
 
@@ -296,14 +331,25 @@ Bot.prototype.userUnpickedTask = function(user, task_id) {
  */
 Bot.prototype.completeTask = function(msg, task_id) {
 	var task = this.getTask(task_id, this.util.currentDay());
-	task.done = true;
-	var field = {
-		title: '',
-		value: Constants.UserCompletedTaskMessage,
-		short: false
+	// do not complete the task if its not a task for today
+	// it means that the user tries to complete it too late
+	if (task.day == this.util.currentDay() && !task.done) {
+		task.done = true;
+		var field = {
+			title: '',
+			value: Constants.UserCompletedTaskMessage,
+			short: false
+		}
+		this.taskMessageUpdate(msg, field);
+		this.giveTacosForTask(msg.body.user, task);
+	} else {
+		var field = {
+			title: '',
+			value: Constants.UserCompletedTaskTooLateMessage,
+			short: false
+		}
+		this.taskMessageUpdate(msg, field);
 	}
-	this.taskMessageUpdate(msg, field);
-	this.giveTacosForTask(msg.body.user, task);
 }
 
 /**
@@ -318,17 +364,7 @@ Bot.prototype.giveTacosForTask = function(user, task) {
 		tacosString = tacosString + ':taco:';
 	}
 	var message = '<@' + user.id + '|' + user.name + '> ' + tacosString;
-	//Hey taco user ID.
-	this.webClient.chat.postMessage(Constants.HeyTacoUID,
-		message, {
-			attachments: [],
-			as_user: true
-		},
-		function(err, res) {
-			if (err) {
-				console.log('Error:', err);
-			}
-		});
+	this.sendMessage(Constants.HeyTacoUID, message);
 }
 
 /**
@@ -374,15 +410,9 @@ Bot.prototype.getTask = function(task_id, day) {
 Bot.prototype.reportTaskStatus = function(day) {
 	var taskStatistics = new TaskStatistics(this.tasks[day]);
 
-	this.webClient.chat.postMessage(Constants.OfficeBotChannelID,
+	this.sendMessage(Constants.OfficeBotChannelID,
 		Constants.TasksStatisticsTitle, {
-			attachments: taskStatistics.getTasksMessageAttachments(),
-			as_user: true
-		},
-		function(err, res) {
-			if (err) {
-				console.log('Error:', err);
-			}
+			attachments: taskStatistics.getTasksMessageAttachments()
 		});
 }
 
@@ -416,7 +446,6 @@ Bot.prototype.setupRecurrentTasks = function() {
 	this.setupTaskListing(scheduler);
 	this.setupUncompletedTasksReminder(scheduler);
 	this.setupUnassignedTaskReminder(scheduler);
-	this.setupStatusReport(scheduler);
 }
 
 /**
@@ -428,46 +457,10 @@ Bot.prototype.checkForUnassignedTasks = function(channel_id) {
 	// check if there are unassigned tasks
 	for (var i in this.tasks) {
 		if (!this.tasks[i].assignee) {
-			this.sendSimpleMessage(channel_id, Constants.TasksStillUnassignedMessage);
+			this.sendMessage(channel_id, Constants.TasksStillUnassignedMessage);
 			break;
 		}
 	}
-}
-
-/**
- *  Send a simple message without a title nor attachments
- * 
- * @param id id of the receiver (user or channel)
- * @para msg message to be sent
- */
-Bot.prototype.sendSimpleMessage = function(id, msg) {
-	this.webClient.chat.postMessage(id,
-		msg, {
-			as_user: true
-		},
-		function(err, res) {
-			if (err) {
-				console.log('Error:', err);
-			}
-		});
-}
-
-/**
- * Setup status report of previous day tasks at 8:30 am 
- *
- * @param remindScheduler scheduler for task setup.
- */
-Bot.prototype.setupStatusReport = function(remindScheduler) {
-	var self = this;
-	remindScheduler.scheduleCallback([2, 3, 4, 5], [8], [30], function() {
-		self.reportTaskStatus(this.util.previousDay());
-	})
-
-	//Listing earlier on monday to avoid the tasks getting wiped out by the task generation.
-	//Since it's all in memory the array will get deleted and the status would be 0
-	remindScheduler.scheduleCallback([1], [8], [28], function() {
-		self.reportTaskStatus(this.util.previousDay());
-	});;
 }
 
 /**
@@ -527,7 +520,10 @@ Bot.prototype.setupTaskGeneration = function(remindScheduler) {
 Bot.prototype.setupTaskListing = function(remindScheduler) {
 	var self = this;
 	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [8], [30], function() {
-		self.bot.listTasksOnChannel(Constants.OfficeBotChannelID);
+		self.deleteMessage(self.tasksMsgTs, Constants.OfficeBotChannelID);
+		// show stats
+		self.reportTaskStatus(this.util.previousDay());
+		self.listTasksOnChannel(false);
 	});
 }
 
@@ -540,7 +536,7 @@ Bot.prototype.remindUserTasks = function(msg) {
 	var usersTasks = this.getUsersUncompletedTasks();
 	console.log(usersTasks);
 	for (var user_id in usersTasks) {
-		this.sendSimpleMessage(user_id, msg);
+		this.sendMessage(user_id, msg);
 	}
 }
 
@@ -597,10 +593,6 @@ Bot.prototype.getUserUncompletedTasks = function(user_id) {
 		});
 	});
 	return userTasks;
-}
-
-Bot.prototype.bimboom = function() {
-	this.reportTaskStatus(this.util.currentDay());
 }
 
 /*
