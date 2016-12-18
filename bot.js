@@ -254,15 +254,23 @@ Bot.prototype.assignTask = function(user, task_id) {
  */
 Bot.prototype.unassignTask = function(msg, task_id) {
 	var task = this.getTask(task_id, this.util.currentDay());
-	task.assignee = null;
-
-	var field = {
-		title: '',
-		value: StringFormat(Constants.UserUnpickedTaskPrivateMessage, Constants.BotName),
-		short: false
+	if (task.day == this.util.currentDay()) {
+		task.assignee = null;
+		var field = {
+			title: '',
+			value: StringFormat(Constants.UserUnpickedTaskPrivateMessage, Constants.BotName),
+			short: false
+		}
+		this.taskMessageUpdate(msg, field);
+		this.userUnpickedTask(msg.body.user, task_id);
+	} else {
+		var field = {
+			title: '',
+			value: Constants.UserCompletedTaskTooLateMessage,
+			short: false
+		}
+		this.taskMessageUpdate(msg, field);
 	}
-	this.taskMessageUpdate(msg, field);
-	this.userUnpickedTask(msg.body.user, task_id);
 }
 
 /**
