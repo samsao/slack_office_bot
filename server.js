@@ -23,9 +23,9 @@ var slapp = Slapp({
 //*********************************************
 
 // FIXME temporary to test tasks generation
-slapp.message(Constants.ListTasksCommand, ['mention'], (msg) => {
-  bot.listTasksOnChannel(false);
-});
+// slapp.message(Constants.ListTasksCommand, ['mention'], (msg) => {
+//   bot.listTasksOnChannel(false);
+// });
 
 slapp.action(Constants.UserTaskListCallBack, Constants.ActionNameDone, (msg, task_id) => {
   bot.completeTask(msg, task_id);
