@@ -296,14 +296,25 @@ Bot.prototype.userUnpickedTask = function(user, task_id) {
  */
 Bot.prototype.completeTask = function(msg, task_id) {
 	var task = this.getTask(task_id, this.util.currentDay());
-	task.done = true;
-	var field = {
-		title: '',
-		value: Constants.UserCompletedTaskMessage,
-		short: false
+	// do not complete the task if its not a task for today
+	// it means that the user tries to complete it too late
+	if (task.day == this.util.currentDay()) {
+		task.done = true;
+		var field = {
+			title: '',
+			value: Constants.UserCompletedTaskMessage,
+			short: false
+		}
+		this.taskMessageUpdate(msg, field);
+		this.giveTacosForTask(msg.body.user, task);
+	} else {
+		var field = {
+			title: '',
+			value: Constants.UserCompletedTaskTooLateMessage,
+			short: false
+		}
+		this.taskMessageUpdate(msg, field);
 	}
-	this.taskMessageUpdate(msg, field);
-	this.giveTacosForTask(msg.body.user, task);
 }
 
 /**
