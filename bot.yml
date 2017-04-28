@@ -1,7 +1,8 @@
-name: Samsao's Office Bot
+name: Office Bot
 description: Slack bot to take care of the office tasks at Samsao
 author: Samsao
-avatar: avatar.jpg
+author_avatar: images/samsao_avatar.png
+avatar: images/avatar.jpg
 # To learn everything supported in the bot.yml file, visit https://beepboophq.com/docs/article/bot-yml
 slackscopes:
   - bot
