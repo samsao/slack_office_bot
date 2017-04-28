@@ -30,9 +30,9 @@ Util.prototype.previousDay = function() {
 	var yesterday = this.currentDay() - 1;
 
 	//if it is monday, the previous day for the bot is friday.
-	if (day == -1) {
+	if (yesterday == -1) {
 		return 4;
 	}
-	return day
+	return yesterday;
 }
 module.exports = Util;
