@@ -1,11 +1,11 @@
 /**
- * This class is for util methods.
+ * This class is for date util methods.
  */
 
 /**
  * Constructor
  */
-function Util() {
+function DateUtil() {
 	this.dayNames = new Array(7);
 	this.dayNames[0] = "Monday";
 	this.dayNames[1] = "Tuesday";
@@ -16,23 +16,23 @@ function Util() {
 	this.dayNames[6] = "Sunday";
 }
 
-Util.prototype.currentDay = function() {
+DateUtil.prototype.currentDay = function() {
 	var date = new Date();
 	var day = date.getDay() - 1; //0 for us is monday
 	//this will return sunday as 6 instead of -1
 	if (day == -1) {
 		return 6;
 	}
-	return day
+	return day;
 }
 
-Util.prototype.previousDay = function() {
+DateUtil.prototype.previousDay = function() {
 	var yesterday = this.currentDay() - 1;
-
+	
 	//if it is monday, the previous day for the bot is friday.
-	if (day == -1) {
+	if (yesterday == -1) {
 		return 4;
 	}
-	return day
+	return yesterday;
 }
-module.exports = Util;
+module.exports = DateUtil;

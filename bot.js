@@ -10,7 +10,7 @@ const Task = require('./model/task.js');
 const TaskMessageAction = require('./model/taskMessageAction.js');
 const TaskStatistics = require('./model/taskStatistics.js');
 const User = require('./model/user.js');
-const Util = require('./util.js');
+const DateUtil = require('./dateutil.js');
 const WebClient = require('@slack/client').WebClient;
 const Scheduler = require('./messageScheduler.js');
 const Constants = require('./constants');
@@ -18,7 +18,7 @@ const StringFormat = require('string-format');
 
 function Bot() {
 	this.tasks = [];
-	this.util = new Util();
+	this.dateUtil = new DateUtil();
 	this.client = new Client();
 	this.client.registerMethod('slackTeams', 'https://beepboophq.com/api/v1/slack-teams', 'GET');
 	this.initializeWebClient();
@@ -165,7 +165,7 @@ Bot.prototype.updateMessage = function(ts, channel, msg, opts, callback) {
  * Get list of attachments for today's tasks.
  */
 Bot.prototype.getTodayTaskAttachments = function() {
-	var currentDay = this.util.currentDay();
+	var currentDay = this.dateUtil.currentDay();
 	//If not a valid day in the array should be empty tasks
 	var tasksToList = this.tasks[currentDay];
 	if (tasksToList) {
@@ -274,7 +274,7 @@ Bot.prototype.getTaskMessageAttachment = function(task, callback_id, taskActions
  * @param task_id id of the task to be assigned
  */
 Bot.prototype.assignTask = function(user, task_id) {
-	var task = this.getTask(task_id, this.util.currentDay());
+	var task = this.getTask(task_id, this.dateUtil.currentDay());
 	task.assignee = new User(user.id, user.name);
 	this.displayTaskForUser(task_id, user.id);
 }
@@ -286,8 +286,8 @@ Bot.prototype.assignTask = function(user, task_id) {
  * @param task_id id of task to unassign
  */
 Bot.prototype.unassignTask = function(msg, task_id) {
-	var task = this.getTask(task_id, this.util.currentDay());
-	if (task.day == this.util.currentDay()) {
+	var task = this.getTask(task_id, this.dateUtil.currentDay());
+	if (task.day == this.dateUtil.currentDay()) {
 		task.assignee = null;
 		var field = {
 			title: '',
@@ -313,7 +313,7 @@ Bot.prototype.unassignTask = function(msg, task_id) {
  * @param task_id id of task to unassign
  */
 Bot.prototype.userUnpickedTask = function(user, task_id) {
-	var task = this.getTask(task_id, this.util.currentDay());
+	var task = this.getTask(task_id, this.dateUtil.currentDay());
 	var actions = [new TaskMessageAction(Constants.ActionNamePick, 'Pick', 'button', task.id)];
 	var attachments = this.getTaskMessageAttachment(task, Constants.TaskReassignCallback, actions);
 
@@ -330,10 +330,10 @@ Bot.prototype.userUnpickedTask = function(user, task_id) {
  * @param task_id id of the completed task
  */
 Bot.prototype.completeTask = function(msg, task_id) {
-	var task = this.getTask(task_id, this.util.currentDay());
+	var task = this.getTask(task_id, this.dateUtil.currentDay());
 	// do not complete the task if its not a task for today
 	// it means that the user tries to complete it too late
-	if (task.day == this.util.currentDay() && !task.done) {
+	if (task.day == this.dateUtil.currentDay() && !task.done) {
 		task.done = true;
 		var field = {
 			title: '',
@@ -412,7 +412,7 @@ Bot.prototype.reportTaskStatus = function(day) {
 
 	this.sendMessage(Constants.OfficeBotChannelID,
 		Constants.TasksStatisticsTitle, {
-			attachments: taskStatistics.getTasksMessageAttachments()
+			attachments: taskStatistics.getAttachments()
 		});
 }
 
@@ -448,6 +448,10 @@ Bot.prototype.setupRecurrentTasks = function() {
 	this.setupUnassignedTaskReminder(scheduler);
 }
 
+//FIXME: IMO, this should not be here. Also, the reminders hours are hardcoded
+//based on the BeepBoop system timezone. I believe a cleaner solution would be
+//to specify the timezone of your office so that we fit with it.
+
 /**
  *  Send a message to channel if there are still unassigned tasks
  * 
@@ -470,7 +474,7 @@ Bot.prototype.checkForUnassignedTasks = function(channel_id) {
  */
 Bot.prototype.setupUnassignedTaskReminder = function(remindScheduler) {
 	var self = this;
-	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [11, 14], [0], function() {
+	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [15, 19], [0], function() {
 		self.checkForUnassignedTasks(Constants.OfficeBotChannelID);
 	});
 }
@@ -482,7 +486,7 @@ Bot.prototype.setupUnassignedTaskReminder = function(remindScheduler) {
  */
 Bot.prototype.setupUncompletedTasksReminder = function(remindScheduler) {
 	var self = this;
-	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [15, 20], [0], function() {
+	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [19, 24], [0], function() {
 		self.remindUserTasks(Constants.NotCompletedTasksMessage);
 	});
 }
@@ -494,7 +498,7 @@ Bot.prototype.setupUncompletedTasksReminder = function(remindScheduler) {
  */
 Bot.prototype.setupTaskReminder = function(remindScheduler) {
 	var self = this;
-	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [21], [0], function() {
+	remindScheduler.scheduleCallback([2, 3, 4, 5, 6], [1], [0], function() {
 		self.remindUserTasks(Constants.ForgotDoneTasksMessage);
 	});
 }
@@ -507,22 +511,22 @@ Bot.prototype.setupTaskReminder = function(remindScheduler) {
  */
 Bot.prototype.setupTaskGeneration = function(remindScheduler) {
 	var self = this;
-	remindScheduler.scheduleCallback([1], [8], [20], function() {
+	remindScheduler.scheduleCallback([1], [12], [20], function() {
 		self.generateTasks();
 	});
 }
 
 /**
- * Setup system to list tasks on a channel for every monday at 8:30 am
+ * Setup system to list tasks on a channel for every day at 8:30 am
  *
  * @param remindScheduler scheduler for task setup.
  */
 Bot.prototype.setupTaskListing = function(remindScheduler) {
 	var self = this;
-	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [8], [30], function() {
+	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [12], [30], function() {
 		self.deleteMessage(self.tasksMsgTs, Constants.OfficeBotChannelID);
 		// show stats
-		self.reportTaskStatus(this.util.previousDay());
+		self.reportTaskStatus(self.dateUtil.previousDay());
 		self.listTasksOnChannel(false);
 	});
 }

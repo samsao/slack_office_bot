@@ -1,5 +1,3 @@
-
-
 var schedule = require('node-schedule');
 const Slapp = require('slapp')
 
@@ -13,7 +11,7 @@ function Scheduler () { }
  *
  * @param weekdays array of integers with 0 as sunday to 6 as saturday
  * @param hours array with hours to trigger. 0 to 24
- * @param minutes array with minutes to trigger. 0 to 24
+ * @param minutes array with minutes to trigger. 0 to 60
  * @param callback callback to trigger at event time
  * @return Task
  */
@@ -29,6 +27,7 @@ Scheduler.prototype.scheduleCallback = function (weekdays,hours, minutes,callbac
 }
 
 module.exports = Scheduler;
+
 
 
 
