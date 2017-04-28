@@ -412,7 +412,7 @@ Bot.prototype.reportTaskStatus = function(day) {
 
 	this.sendMessage(Constants.OfficeBotChannelID,
 		Constants.TasksStatisticsTitle, {
-			attachments: taskStatistics.getTasksMessageAttachments()
+			attachments: taskStatistics.getAttachments()
 		});
 }
 
@@ -470,7 +470,7 @@ Bot.prototype.checkForUnassignedTasks = function(channel_id) {
  */
 Bot.prototype.setupUnassignedTaskReminder = function(remindScheduler) {
 	var self = this;
-	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [11, 14], [0], function() {
+	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [15, 19], [0], function() {
 		self.checkForUnassignedTasks(Constants.OfficeBotChannelID);
 	});
 }
@@ -482,7 +482,7 @@ Bot.prototype.setupUnassignedTaskReminder = function(remindScheduler) {
  */
 Bot.prototype.setupUncompletedTasksReminder = function(remindScheduler) {
 	var self = this;
-	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [15, 20], [0], function() {
+	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [19, 24], [0], function() {
 		self.remindUserTasks(Constants.NotCompletedTasksMessage);
 	});
 }
@@ -494,7 +494,7 @@ Bot.prototype.setupUncompletedTasksReminder = function(remindScheduler) {
  */
 Bot.prototype.setupTaskReminder = function(remindScheduler) {
 	var self = this;
-	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [21], [0], function() {
+	remindScheduler.scheduleCallback([2, 3, 4, 5, 6], [1], [0], function() {
 		self.remindUserTasks(Constants.ForgotDoneTasksMessage);
 	});
 }
@@ -507,22 +507,22 @@ Bot.prototype.setupTaskReminder = function(remindScheduler) {
  */
 Bot.prototype.setupTaskGeneration = function(remindScheduler) {
 	var self = this;
-	remindScheduler.scheduleCallback([1], [8], [20], function() {
+	remindScheduler.scheduleCallback([1], [12], [20], function() {
 		self.generateTasks();
 	});
 }
 
 /**
- * Setup system to list tasks on a channel for every monday at 8:30 am
+ * Setup system to list tasks on a channel for every day at 8:30 am
  *
  * @param remindScheduler scheduler for task setup.
  */
 Bot.prototype.setupTaskListing = function(remindScheduler) {
 	var self = this;
-	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [8], [30], function() {
+	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [12], [30], function() {
 		self.deleteMessage(self.tasksMsgTs, Constants.OfficeBotChannelID);
 		// show stats
-		self.reportTaskStatus(this.util.previousDay());
+		self.reportTaskStatus(self.util.previousDay());
 		self.listTasksOnChannel(false);
 	});
 }
