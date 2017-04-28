@@ -4,42 +4,42 @@
 		"title": "Grocery shopping",
 		"description": "Order groceries for next week on https://www.metro.ca/en. Check for stocks before ordering.",
 		"tacos": 4,
-		"days": [4]
+		"days": [5]
 	}, {
 		"id": 2,
 		"title": "Clean tables and counters",
 		"description": "Before you leave, clean all the tables and counters. We all love to eat on a clean surface :)",
 		"tacos": 2,
-		"days": [0, 1, 2, 3]
+		"days": [1, 2, 3, 4, 5]
 	}, {
 		"id": 3,
 		"title": "Remove dishes from dishwasher",
 		"description": "When you arrive, remove the dishes from the dishwasher and place them in the kitchen cabinet. Also, there will probably be leftovers in the sink, so put them in the dishwasher.",
 		"tacos": 4,
-		"days": [0, 1, 2, 3, 4]
+		"days": [1, 2, 3, 4, 5]
 	}, {
 		"id": 4,
 		"title": "Start the dishwasher",
 		"description": "Before you leave, start the dishwasher. Also, if there are dishes in the sink, put them in the dishwasher.",
 		"tacos": 2,
-		"days": [0, 1, 2, 3, 4]
+		"days": [1, 2, 3, 4, 5]
 	}, {
 		"id": 5,
 		"title": "Water the plants",
 		"description": "Water all the plants in the office.",
 		"tacos": 3,
-		"days": [0]
+		"days": [1, 3]
 	}, {
 		"id": 6,
 		"title": "Buy bagels",
 		"description": "Buy bagels for the whole week.",
 		"tacos": 3,
-		"days": [0]
+		"days": [1]
 	}, {
 		"id": 7,
 		"title": "Cut the bagels",
 		"description": "At the end of the day, cut all the bagels and put them in the freezer.",
 		"tacos": 3,
-		"days": [0]
+		"days": [1]
 	}]
 }
