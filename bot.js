@@ -448,6 +448,10 @@ Bot.prototype.setupRecurrentTasks = function() {
 	this.setupUnassignedTaskReminder(scheduler);
 }
 
+//FIXME: IMO, this should not be here. Also, the reminders hours are hardcoded
+//based on the BeepBoop system timezone. I believe a cleaner solution would be
+//to specify the timezone of your office so that we fit with it.
+
 /**
  *  Send a message to channel if there are still unassigned tasks
  * 
