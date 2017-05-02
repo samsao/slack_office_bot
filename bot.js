@@ -32,16 +32,17 @@ function Bot() {
  * Reads the tasks.json file and create the tasks.
  */
 Bot.prototype.generateTasks = function() {
-	// empty the tasks first
-	this.tasks = new Array(7);
-
-	// read the JSON file
-	var tasksJSON = JSON.parse(Fs.readFileSync('model/tasks.json', 'utf8')).tasks;
-
+	
+	// Create an array of array to represent tasks for each day
+	this.tasks = new Array();
 	//Create new array to hold tasks
 	for (var i = 0; i < 7; i++) {
 		this.tasks[i] = [];
 	}
+
+	// read the JSON file
+	var tasksJSON = JSON.parse(Fs.readFileSync('model/tasks.json', 'utf8')).tasks;
+
 	//insert tasks in the array
 	for (var i in tasksJSON) {
 		var title = tasksJSON[i].title;
@@ -451,6 +452,8 @@ Bot.prototype.setupRecurrentTasks = function() {
 //FIXME: IMO, this should not be here. Also, the reminders hours are hardcoded
 //based on the BeepBoop system timezone. I believe a cleaner solution would be
 //to specify the timezone of your office so that we fit with it.
+//NOTE: Maybe we could have a scheduler object passed to the bot instead?
+//NOTE: I would probably also do an object for scheduling, or scrap that altogether and make it easier
 
 /**
  *  Send a message to channel if there are still unassigned tasks
