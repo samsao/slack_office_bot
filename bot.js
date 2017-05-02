@@ -364,8 +364,8 @@ Bot.prototype.giveTacosForTask = function(user, task) {
 	for (var i = 0; i < task.tacos; i++) {
 		tacosString = tacosString + ':taco:';
 	}
-	var message = '<@' + user.id + '|' + user.name + '> ' + tacosString;
-	this.sendMessage(Constants.HeyTacoUID, message);
+	var message = '<@' + user.id + '|' + user.name + '> ' + tacosString + " for completing: " + task.title;
+	this.sendMessage(Constants.OfficeBotChannelID, message);
 }
 
 /**
