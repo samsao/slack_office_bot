@@ -331,10 +331,21 @@ Bot.prototype.userUnpickedTask = function(user, task_id) {
  * @param task_id id of the completed task
  */
 Bot.prototype.completeTask = function(msg, task_id) {
-	var task = this.getTask(task_id, this.dateUtil.currentDay());
+	let currentDay = this.dateUtil.currentDay()
+	var task = this.getTask(task_id, currentDay);
+
+	// Validate that the task exists.
+	if (!task) {
+		var field = {
+			title: '',
+			value: Constants.UserCompletedTaskError,
+			short: false
+		}
+		this.taskMessageUpdate(msg, field);
+	}
 	// do not complete the task if its not a task for today
 	// it means that the user tries to complete it too late
-	if (task.day == this.dateUtil.currentDay() && !task.done) {
+	if (task.day == currentDay && !task.done) {
 		task.done = true;
 		var field = {
 			title: '',

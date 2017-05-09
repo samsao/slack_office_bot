@@ -28,6 +28,7 @@ define('UserUnpickedTaskPublicMessage', '{0} cannot complete its task today. Ple
 define('UserCompletedTaskMessage', 'Thank you for completing your task. I shall reward you nicely :taco:');
 define('NotCompletedTasksMessage', 'Please do not forget to complete your tasks for today :anguished:');
 define('UserCompletedTaskTooLateMessage', 'Sorry but this task was supposed to be completed on a previous day :white_frowning_face:');
+define('UserCompletedTaskError', 'There was an error completing your task, sorry about that.');
 define('ForgotDoneTasksMessage', 'Did you forget to mark some tasks as done? If you have not completed the tasks, well it\'s too late and I will be very angry :rage3:');
 define('TasksStillUnassignedMessage', '<!channel|channel> some tasks are still unassigned! Please help :pray::skin-tone-3:');
 
