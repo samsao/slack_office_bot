@@ -172,6 +172,7 @@ Bot.prototype.getTodayTaskAttachments = function() {
 	if (tasksToList) {
 		return this.getTasksListMessageAttachments(tasksToList);
 	}
+	console.log("Error getting tasks for the day: " + currentDay + " tasks are: " + this.tasks)
 	return null;
 }
 
@@ -375,8 +376,8 @@ Bot.prototype.giveTacosForTask = function(user, task) {
 	for (var i = 0; i < task.tacos; i++) {
 		tacosString = tacosString + ':taco:';
 	}
-	var message = '<@' + user.id + '|' + user.name + '> ' + tacosString + " for completing: " + task.title;
-	this.sendMessage(Constants.OfficeBotChannelID, message);
+	var message = '<@' + user.id + '|' + user.name + '> ' + tacosString;
+	this.sendMessage(Constants.HeyTacoUID, message);
 }
 
 /**
@@ -411,6 +412,8 @@ Bot.prototype.getTask = function(task_id, day) {
 			return tasks[i];
 		}
 	}
+	console.log("Error trying to fetch task of id: " +  task_id + " for(day): " + day);
+	console.log("Tasks for the day are: " + tasks)
 	return null;
 }
 
@@ -526,6 +529,7 @@ Bot.prototype.setupTaskReminder = function(remindScheduler) {
 Bot.prototype.setupTaskGeneration = function(remindScheduler) {
 	var self = this;
 	remindScheduler.scheduleCallback([1], [12], [20], function() {
+		console.log("Generating tasks...")
 		self.generateTasks();
 	});
 }
@@ -538,8 +542,9 @@ Bot.prototype.setupTaskGeneration = function(remindScheduler) {
 Bot.prototype.setupTaskListing = function(remindScheduler) {
 	var self = this;
 	remindScheduler.scheduleCallback([1, 2, 3, 4, 5], [12], [30], function() {
+		console.log("Listing tasks...")
 		self.deleteMessage(self.tasksMsgTs, Constants.OfficeBotChannelID);
-		// show stats
+		// show status
 		self.reportTaskStatus(self.dateUtil.previousDay());
 		self.listTasksOnChannel(false);
 	});
